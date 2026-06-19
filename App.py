@@ -196,19 +196,12 @@ def get_days():
     return jsonify([day.to_dict() for day in days])
 
 
-@app.route('/api/days/<int:day_id>', methods=['DELETE'])
+@app.route('/api/days/<int:day_id>', methods=['DELETE'], endpoint='delete_day')
 def delete_day(day_id):
     day = Day.query.get_or_404(day_id)
     db.session.delete(day)
     db.session.commit()
-
-    # Re-number remaining days sequentially
-    remaining = Day.query.order_by(Day.day_number.asc()).all()
-    for i, d in enumerate(remaining, start=1):
-        d.day_number = i
-    db.session.commit()
-
-    return jsonify([d.to_dict() for d in remaining])
+    return jsonify({"success": True})
 
 
 @app.route('/api/days', methods=['POST'])
