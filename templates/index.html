@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+        .scrollbar-thin::-webkit-scrollbar { height: 6px; width: 6px; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
         .tab-active { border-bottom: 3px solid #4f46e5; color: #4f46e5; }
@@ -18,26 +18,51 @@
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Mobile: stack add-item form vertically */
+        @media (max-width: 480px) {
+            .add-item-form { flex-wrap: wrap; }
+            .add-item-form input[type="text"]  { flex: 1 1 100%; }
+            .add-item-form input[type="number"] { flex: 1 1 calc(50% - 0.25rem); }
+            .add-item-form button { flex: 1 1 calc(50% - 0.25rem); }
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
-    <div class="max-w-5xl mx-auto px-4 py-8">
+    <!-- Delete Day Confirmation Modal -->
+    <div id="deleteDayModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Day?</h3>
+            <p class="text-slate-500 text-sm mb-6">This will permanently delete <strong id="deleteDayLabel">Day X</strong> and all its expenses. This cannot be undone.</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()"
+                    class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="confirmDeleteDay()"
+                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
+                    Yes, Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
 
         <!-- Header -->
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-700">💰 Personal Expense Tracker</h1>
-            <p class="text-slate-500 mt-1">Track your housing costs and daily expenses in Bengaluru</p>
+        <header class="mb-6 sm:mb-8 text-center">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-indigo-700">💰 Personal Expense Tracker</h1>
+            <p class="text-slate-500 mt-1 text-sm sm:text-base">Track your housing costs and daily expenses in Bengaluru</p>
         </header>
 
         <!-- Tabs -->
-        <div class="flex justify-center gap-6 border-b border-slate-200 mb-8">
+        <div class="flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8">
             <button id="tabDailyBtn" onclick="switchTab('daily')"
-                class="pb-3 px-2 font-semibold text-slate-500 tab-active transition-colors">
+                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 tab-active transition-colors whitespace-nowrap">
                 📅 Daily Expenses
             </button>
             <button id="tabHousingBtn" onclick="switchTab('housing')"
-                class="pb-3 px-2 font-semibold text-slate-500 transition-colors">
+                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">
                 🏠 Housing & Fixed Costs
             </button>
         </div>
@@ -46,25 +71,25 @@
         <section id="dailySection" class="fade-in">
 
             <!-- Overall Daily Summary -->
-            <div class="bg-white rounded-2xl shadow-md p-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-700">📅 Daily Expense Tracker</h2>
-                    <p class="text-slate-500 text-sm">Add expenses for each day and track totals.</p>
+                    <h2 class="text-base sm:text-lg font-bold text-slate-700">📅 Daily Expense Tracker</h2>
+                    <p class="text-slate-500 text-xs sm:text-sm">Add expenses for each day and track totals.</p>
                 </div>
-                <div class="text-right">
-                    <p class="text-slate-500 text-sm">Total Daily Expenses (All Days)</p>
-                    <p id="grandDailyTotal" class="text-2xl font-extrabold text-indigo-600">₹0.00</p>
+                <div class="sm:text-right">
+                    <p class="text-slate-500 text-xs sm:text-sm">Total Daily Expenses (All Days)</p>
+                    <p id="grandDailyTotal" class="text-xl sm:text-2xl font-extrabold text-indigo-600">₹0.00</p>
                 </div>
             </div>
 
-            <!-- Days Container -->
-            <div id="daysContainer" class="grid md:grid-cols-2 gap-6"></div>
+            <!-- Days Container: 1 col on mobile, 2 col on md+ -->
+            <div id="daysContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"></div>
 
             <!-- Add Next Day Button -->
-            <div class="mt-8 flex justify-center">
+            <div class="mt-6 sm:mt-8 flex justify-center">
                 <button onclick="addNextDay()"
-                    class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-full shadow-lg text-lg transition-transform hover:scale-105">
-                    <span class="text-2xl leading-none">+</span> Add Next Day
+                    class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3 px-6 sm:px-8 rounded-full shadow-lg text-base sm:text-lg transition-transform hover:scale-105">
+                    <span class="text-xl sm:text-2xl leading-none">+</span> Add Next Day
                 </button>
             </div>
 
@@ -72,26 +97,26 @@
 
         <!-- PART TWO: HOUSING -->
         <section id="housingSection" class="hidden fade-in">
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
 
                 <!-- Input Card -->
-                <div class="bg-white rounded-2xl shadow-md p-6">
-                    <h2 class="text-lg font-bold mb-4 text-slate-700">🏠 Housing Details</h2>
+                <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
+                    <h2 class="text-base sm:text-lg font-bold mb-4 text-slate-700">🏠 Housing Details</h2>
 
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-slate-600 mb-1">Monthly Rent Amount (₹)</label>
                         <input type="number" id="monthlyRent" min="0" step="0.01" placeholder="e.g. 18000"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                     </div>
 
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Security Advance Amount (₹) <span class="text-xs text-slate-400">— one-time, paid once</span></label>
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Security Advance (₹) <span class="text-xs text-slate-400">— one-time</span></label>
                         <input type="number" id="securityAdvance" min="0" step="0.01" placeholder="e.g. 100000"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                     </div>
 
                     <button onclick="saveHousing()"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm sm:text-base">
                         Save Housing Details
                     </button>
                     <p id="housingSaveMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Saved successfully!</p>
@@ -99,23 +124,23 @@
                     <hr class="my-5 border-slate-200">
 
                     <div>
-                        <p class="text-sm font-semibold text-slate-700 mb-2">Rent Payment History</p>
+                        <p class="text-sm font-semibold text-slate-700 mb-3">Rent Payment History</p>
 
-                        <div class="flex gap-2 mb-3">
+                        <div class="flex flex-col sm:flex-row gap-2 mb-3">
                             <div class="flex-1">
                                 <label class="block text-xs text-slate-500 mb-1">Month</label>
                                 <input type="month" id="rentMonth"
-                                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                             </div>
                             <div class="flex-1">
                                 <label class="block text-xs text-slate-500 mb-1">Date Paid</label>
                                 <input type="date" id="rentPaidOn"
-                                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                             </div>
                         </div>
 
                         <button onclick="addRentPayment()"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
+                            class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm sm:text-base">
                             ➕ Mark This Month's Rent as Paid
                         </button>
                         <p id="rentPaymentMsg" class="text-red-500 text-sm mt-2 text-center hidden"></p>
@@ -123,14 +148,14 @@
                         <div id="rentPaymentsList" class="mt-4 space-y-2 max-h-48 overflow-y-auto scrollbar-thin"></div>
 
                         <p class="text-xs text-slate-400 mt-2 text-center">
-                            Record each month's rent payment with its date. The security advance is never repeated.
+                            The security advance is a one-time payment and is never repeated.
                         </p>
                     </div>
                 </div>
 
                 <!-- Summary Card -->
-                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-md p-6 text-white flex flex-col justify-center">
-                    <h2 class="text-lg font-bold mb-4">📊 Accommodation Summary</h2>
+                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-md p-4 sm:p-6 text-white flex flex-col justify-center">
+                    <h2 class="text-base sm:text-lg font-bold mb-4">📊 Accommodation Summary</h2>
 
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between">
@@ -146,14 +171,14 @@
                             <span id="summaryMonthsPaid" class="font-semibold">0</span>
                         </div>
                         <hr class="border-white/30 my-2">
-                        <div class="flex justify-between text-lg">
+                        <div class="flex justify-between text-base sm:text-lg">
                             <span class="font-bold">Total Paid Till Date</span>
                             <span id="summaryTotal" class="font-extrabold">₹0.00</span>
                         </div>
                     </div>
 
                     <p class="text-xs opacity-70 mt-4">
-                        * Total paid till date = Security Advance (one-time) + (Monthly Rent × Months Paid).
+                        * Total = Security Advance (one-time) + (Monthly Rent × Months Paid).
                     </p>
                 </div>
 
@@ -164,6 +189,8 @@
 
     <script>
         const fmt = (num) => '₹' + Number(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        let pendingDeleteDayId = null;
 
         // ---------------- TAB SWITCHING ----------------
         function switchTab(tab) {
@@ -184,6 +211,34 @@
                 housingBtn.classList.remove('tab-active');
             }
         }
+
+        // ---------------- DELETE DAY MODAL ----------------
+        function openDeleteModal(dayId, dayNumber) {
+            pendingDeleteDayId = dayId;
+            document.getElementById('deleteDayLabel').textContent = `Day ${dayNumber}`;
+            document.getElementById('deleteDayModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            pendingDeleteDayId = null;
+            document.getElementById('deleteDayModal').classList.add('hidden');
+        }
+
+        async function confirmDeleteDay() {
+            if (!pendingDeleteDayId) return;
+            const res = await fetch(`/api/days/${pendingDeleteDayId}`, { method: 'DELETE' });
+            if (res.ok) {
+                const card = document.getElementById(`day-card-${pendingDeleteDayId}`);
+                if (card) card.remove();
+                updateGrandTotal();
+            }
+            closeDeleteModal();
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('deleteDayModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
 
         // ---------------- HOUSING ----------------
         async function loadHousing() {
@@ -211,35 +266,31 @@
 
         function renderRentPayments(payments) {
             const list = document.getElementById('rentPaymentsList');
-
             if (!payments.length) {
                 list.innerHTML = `<p class="text-sm text-slate-400 text-center">No rent payments recorded yet.</p>`;
                 return;
             }
-
             list.innerHTML = payments.map(p => `
                 <div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm" id="payment-${p.id}">
-                    <div>
+                    <div class="min-w-0 flex-1">
                         <span class="font-semibold text-slate-700">${formatMonth(p.month)}</span>
-                        <span class="text-slate-400 text-xs ml-2">paid on ${formatDate(p.paid_on)}</span>
+                        <span class="text-slate-400 text-xs ml-1 block sm:inline">paid on ${formatDate(p.paid_on)}</span>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 ml-2 shrink-0">
                         <span class="font-semibold text-slate-600">${fmt(p.amount)}</span>
-                        <button onclick="deleteRentPayment(${p.id})" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+                        <button onclick="deleteRentPayment(${p.id})" class="text-red-400 hover:text-red-600 font-bold text-sm p-1">✕</button>
                     </div>
                 </div>
             `).join('');
         }
 
         function formatMonth(monthStr) {
-            // monthStr is "YYYY-MM"
             const [year, month] = monthStr.split('-');
             const date = new Date(Number(year), Number(month) - 1, 1);
             return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
         }
 
         function formatDate(dateStr) {
-            // dateStr is "YYYY-MM-DD"
             const date = new Date(dateStr + 'T00:00:00');
             return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
         }
@@ -247,7 +298,6 @@
         async function saveHousing() {
             const monthly_rent = document.getElementById('monthlyRent').value || 0;
             const security_advance = document.getElementById('securityAdvance').value || 0;
-
             const res = await fetch('/api/housing', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -255,15 +305,14 @@
             });
             const data = await res.json();
             renderHousing(data);
-
             const msg = document.getElementById('housingSaveMsg');
             msg.classList.remove('hidden');
             setTimeout(() => msg.classList.add('hidden'), 2000);
         }
 
         async function addRentPayment() {
-            const month = document.getElementById('rentMonth').value;   // "YYYY-MM"
-            const paid_on = document.getElementById('rentPaidOn').value; // "YYYY-MM-DD"
+            const month = document.getElementById('rentMonth').value;
+            const paid_on = document.getElementById('rentPaidOn').value;
             const msgEl = document.getElementById('rentPaymentMsg');
 
             if (!month || !paid_on) {
@@ -277,7 +326,6 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ month, paid_on })
             });
-
             const data = await res.json();
 
             if (!res.ok) {
@@ -310,11 +358,9 @@
 
         function renderDayCard(day) {
             const container = document.getElementById('daysContainer');
-
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-2xl shadow-md p-5 fade-in';
+            card.className = 'bg-white rounded-2xl shadow-md p-4 sm:p-5 fade-in';
             card.id = `day-card-${day.id}`;
-
             card.innerHTML = dayCardInnerHtml(day);
             container.appendChild(card);
         }
@@ -327,15 +373,15 @@
                 : `<span class="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-1 rounded-full">In Progress</span>`;
 
             const formHtml = completed ? '' : `
-                <div class="flex gap-2 mt-3">
-                    <input type="text" placeholder="Item name (e.g. Groceries)"
+                <div class="add-item-form flex gap-2 mt-3">
+                    <input type="text" placeholder="Item name"
                         id="item-name-${day.id}"
-                        class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                    <input type="number" placeholder="₹ Amount" min="0" step="0.01"
+                        class="flex-1 min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    <input type="number" placeholder="₹ Amt" min="0" step="0.01"
                         id="item-amount-${day.id}"
-                        class="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                        class="w-24 sm:w-28 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                     <button onclick="addItem(${day.id})"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                        class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0">
                         Add
                     </button>
                 </div>
@@ -343,50 +389,54 @@
 
             const actionBtn = completed
                 ? `<button onclick="toggleComplete(${day.id})"
-                        class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 px-3 py-1.5 rounded-lg transition-colors">
+                        class="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 px-3 py-1.5 rounded-lg transition-colors">
                         ✏️ Edit
                    </button>`
                 : `<button onclick="toggleComplete(${day.id})"
-                        class="text-sm font-semibold text-emerald-600 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors">
-                        ✅ Mark Day as Complete
+                        class="text-xs sm:text-sm font-semibold text-emerald-600 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors">
+                        ✅ Complete
                    </button>`;
 
             return `
                 <div class="flex justify-between items-center mb-1">
-                    <h3 class="text-lg font-bold text-slate-700">Day ${day.day_number}</h3>
-                    ${badge}
+                    <h3 class="text-base sm:text-lg font-bold text-slate-700">Day ${day.day_number}</h3>
+                    <div class="flex items-center gap-2">
+                        ${badge}
+                        <button onclick="openDeleteModal(${day.id}, ${day.day_number})"
+                            title="Delete this day"
+                            class="text-red-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
+                            >🗑️</button>
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm text-slate-500">Day Total</span>
+                    <span class="text-xs sm:text-sm text-slate-500">Day Total</span>
                     <span class="text-sm font-semibold text-emerald-600" id="day-total-${day.id}">${fmt(day.total)}</span>
                 </div>
 
-                <div class="space-y-2 max-h-48 overflow-y-auto scrollbar-thin mb-3" id="day-items-${day.id}">
+                <div class="space-y-2 max-h-44 overflow-y-auto scrollbar-thin mb-3" id="day-items-${day.id}">
                     ${day.items.map(item => itemRowHtml(day.id, item, completed)).join('')}
                 </div>
 
                 ${formHtml}
 
-                <div class="mt-4 flex justify-end">
+                <div class="mt-3 flex justify-end">
                     ${actionBtn}
                 </div>
             `;
         }
 
         function itemRowHtml(dayId, item, completed) {
-            const deleteBtn = completed
-                ? ''
-                : `<button onclick="deleteItem(${item.id}, ${dayId})" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>`;
-
+            const deleteBtn = completed ? ''
+                : `<button onclick="deleteItem(${item.id}, ${dayId})" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">✕</button>`;
             const editBtn = completed
-                ? `<button onclick="editItem(${item.id}, ${dayId})" class="text-indigo-400 hover:text-indigo-600 font-bold text-xs">✏️</button>`
+                ? `<button onclick="editItem(${item.id}, ${dayId})" class="text-indigo-400 hover:text-indigo-600 font-bold text-xs p-1">✏️</button>`
                 : '';
 
             return `
                 <div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm" id="item-${item.id}">
-                    <span class="text-slate-700">${escapeHtml(item.item_name)}</span>
-                    <div class="flex items-center gap-3">
+                    <span class="text-slate-700 truncate flex-1 mr-2">${escapeHtml(item.item_name)}</span>
+                    <div class="flex items-center gap-1 shrink-0">
                         <span class="font-semibold text-slate-600">${fmt(item.amount)}</span>
                         ${editBtn}
                         ${deleteBtn}
@@ -406,19 +456,19 @@
             const day = await res.json();
             renderDayCard(day);
             updateGrandTotal();
+            // Scroll new card into view on mobile
+            const card = document.getElementById(`day-card-${day.id}`);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function refreshDayCard(day) {
             const card = document.getElementById(`day-card-${day.id}`);
-            if (card) {
-                card.innerHTML = dayCardInnerHtml(day);
-            }
+            if (card) card.innerHTML = dayCardInnerHtml(day);
         }
 
         async function addItem(dayId) {
             const nameInput = document.getElementById(`item-name-${dayId}`);
             const amountInput = document.getElementById(`item-amount-${dayId}`);
-
             const item_name = nameInput.value.trim();
             const amount = amountInput.value;
 
@@ -432,12 +482,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ item_name, amount })
             });
-
             const day = await res.json();
             refreshDayCard(day);
             updateGrandTotal();
-
-            // refocus the name input for quick consecutive entries
             const newNameInput = document.getElementById(`item-name-${dayId}`);
             if (newNameInput) newNameInput.focus();
         }
@@ -456,7 +503,6 @@
 
             const newName = prompt('Edit item name:', currentName);
             if (newName === null) return;
-
             const newAmount = prompt('Edit amount (₹):', currentAmountText);
             if (newAmount === null) return;
 
@@ -470,7 +516,6 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ item_name: newName.trim(), amount: newAmount })
             });
-
             const day = await res.json();
             refreshDayCard(day);
             updateGrandTotal();
