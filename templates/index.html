@@ -228,8 +228,11 @@
             if (!pendingDeleteDayId) return;
             const res = await fetch(`/api/days/${pendingDeleteDayId}`, { method: 'DELETE' });
             if (res.ok) {
-                const card = document.getElementById(`day-card-${pendingDeleteDayId}`);
-                if (card) card.remove();
+                // Server returns re-numbered days — reload all cards
+                const days = await res.json();
+                const container = document.getElementById('daysContainer');
+                container.innerHTML = '';
+                days.forEach(day => renderDayCard(day));
                 updateGrandTotal();
             }
             closeDeleteModal();
