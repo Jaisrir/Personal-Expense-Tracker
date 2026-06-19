@@ -25,6 +25,9 @@
             .add-item-form input[type="number"] { flex: 1 1 calc(50% - 0.25rem); }
             .add-item-form button { flex: 1 1 calc(50% - 0.25rem); }
         }
+        .habit-toggle { cursor: pointer; user-select: none; transition: all 0.15s ease; }
+        .habit-toggle.on { background: #ecfdf5; border-color: #10b981; color: #047857; }
+        .habit-toggle.off { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
@@ -47,6 +50,24 @@
         </div>
     </div>
 
+    <!-- Delete Health Log Confirmation Modal -->
+    <div id="deleteHealthModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Log?</h3>
+            <p class="text-slate-500 text-sm mb-6">This will permanently delete the health log for <strong id="deleteHealthLabel">this date</strong>. This cannot be undone.</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteHealthModal()"
+                    class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="confirmDeleteHealthLog()"
+                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
+                    Yes, Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
 
         <!-- Header -->
@@ -56,7 +77,7 @@
         </header>
 
         <!-- Tabs -->
-        <div class="flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8">
+        <div class="flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8 overflow-x-auto">
             <button id="tabDailyBtn" onclick="switchTab('daily')"
                 class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 tab-active transition-colors whitespace-nowrap">
                 📅 Daily Expenses
@@ -64,6 +85,10 @@
             <button id="tabHousingBtn" onclick="switchTab('housing')"
                 class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">
                 🏠 Housing & Fixed Costs
+            </button>
+            <button id="tabHealthBtn" onclick="switchTab('health')"
+                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">
+                🥗 Health Tracker
             </button>
         </div>
 
@@ -185,30 +210,140 @@
             </div>
         </section>
 
+        <!-- PART THREE: HEALTH TRACKER -->
+        <section id="healthSection" class="hidden fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+
+                <!-- Log Entry Card -->
+                <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
+                    <h2 class="text-base sm:text-lg font-bold mb-1 text-slate-700">🥗 Log Today's Habits</h2>
+                    <p class="text-slate-500 text-xs sm:text-sm mb-4">Pick a date and mark the habits you kept.</p>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
+                        <input type="date" id="healthDate"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        <div id="toggleSugarCut" onclick="toggleHabitButton('toggleSugarCut')"
+                            class="habit-toggle off flex items-center justify-between border rounded-lg px-3 py-3">
+                            <span class="font-medium text-sm">🍬 Cut Sugar</span>
+                            <span class="habit-toggle-state text-xs font-bold uppercase">No</span>
+                        </div>
+                        <div id="toggleOutsideFood" onclick="toggleHabitButton('toggleOutsideFood')"
+                            class="habit-toggle off flex items-center justify-between border rounded-lg px-3 py-3">
+                            <span class="font-medium text-sm">🍔 Avoided Outside Food</span>
+                            <span class="habit-toggle-state text-xs font-bold uppercase">No</span>
+                        </div>
+                        <div id="toggleFruits" onclick="toggleHabitButton('toggleFruits')"
+                            class="habit-toggle off flex items-center justify-between border rounded-lg px-3 py-3">
+                            <span class="font-medium text-sm">🍎 Ate Fruits</span>
+                            <span class="habit-toggle-state text-xs font-bold uppercase">No</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Notes <span class="text-xs text-slate-400">(optional)</span></label>
+                        <input type="text" id="healthNotes" placeholder="e.g. felt great today"
+                            maxlength="300"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                    </div>
+
+                    <button onclick="saveHealthLog()"
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm sm:text-base">
+                        Save Log for This Date
+                    </button>
+                    <p id="healthSaveMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Saved successfully!</p>
+                    <p id="healthErrorMsg" class="text-red-500 text-sm mt-2 text-center hidden"></p>
+
+                    <hr class="my-5 border-slate-200">
+
+                    <p class="text-sm font-semibold text-slate-700 mb-3">History</p>
+                    <div id="healthLogsList" class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin"></div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl shadow-md p-4 sm:p-6 text-white flex flex-col justify-center">
+                    <h2 class="text-base sm:text-lg font-bold mb-4">📊 Habit Stats</h2>
+
+                    <div class="space-y-4 text-sm">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="opacity-90">🍬 Sugar Cut</span>
+                                <span id="statSugarCut" class="font-semibold">0 / 0 days (0%)</span>
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-2">
+                                <div id="barSugarCut" class="bg-white h-2 rounded-full" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="opacity-90">🍔 Outside Food Avoided</span>
+                                <span id="statOutsideFood" class="font-semibold">0 / 0 days (0%)</span>
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-2">
+                                <div id="barOutsideFood" class="bg-white h-2 rounded-full" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="opacity-90">🍎 Fruits Eaten</span>
+                                <span id="statFruits" class="font-semibold">0 / 0 days (0%)</span>
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-2">
+                                <div id="barFruits" class="bg-white h-2 rounded-full" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-white/30 my-4">
+                    <div class="flex justify-between text-base">
+                        <span class="font-bold">Total Days Tracked</span>
+                        <span id="statTotalDays" class="font-extrabold">0</span>
+                    </div>
+
+                    <p class="text-xs opacity-70 mt-4">
+                        * Percentages are based on all days you've logged so far.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
     </div>
 
     <script>
         const fmt = (num) => '₹' + Number(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         let pendingDeleteDayId = null;
+        let pendingDeleteHealthId = null;
 
         // ---------------- TAB SWITCHING ----------------
         function switchTab(tab) {
             const housingSection = document.getElementById('housingSection');
             const dailySection = document.getElementById('dailySection');
+            const healthSection = document.getElementById('healthSection');
             const housingBtn = document.getElementById('tabHousingBtn');
             const dailyBtn = document.getElementById('tabDailyBtn');
+            const healthBtn = document.getElementById('tabHealthBtn');
+
+            dailySection.classList.add('hidden');
+            housingSection.classList.add('hidden');
+            healthSection.classList.add('hidden');
+            dailyBtn.classList.remove('tab-active');
+            housingBtn.classList.remove('tab-active');
+            healthBtn.classList.remove('tab-active');
 
             if (tab === 'housing') {
                 housingSection.classList.remove('hidden');
-                dailySection.classList.add('hidden');
                 housingBtn.classList.add('tab-active');
-                dailyBtn.classList.remove('tab-active');
+            } else if (tab === 'health') {
+                healthSection.classList.remove('hidden');
+                healthBtn.classList.add('tab-active');
             } else {
                 dailySection.classList.remove('hidden');
-                housingSection.classList.add('hidden');
                 dailyBtn.classList.add('tab-active');
-                housingBtn.classList.remove('tab-active');
             }
         }
 
@@ -241,6 +376,33 @@
         // Close modal on backdrop click
         document.getElementById('deleteDayModal').addEventListener('click', function(e) {
             if (e.target === this) closeDeleteModal();
+        });
+
+        // ---------------- DELETE HEALTH LOG MODAL ----------------
+        function openDeleteHealthModal(logId, dateLabel) {
+            pendingDeleteHealthId = logId;
+            document.getElementById('deleteHealthLabel').textContent = dateLabel;
+            document.getElementById('deleteHealthModal').classList.remove('hidden');
+        }
+
+        function closeDeleteHealthModal() {
+            pendingDeleteHealthId = null;
+            document.getElementById('deleteHealthModal').classList.add('hidden');
+        }
+
+        async function confirmDeleteHealthLog() {
+            if (!pendingDeleteHealthId) return;
+            const res = await fetch(`/api/health/${pendingDeleteHealthId}`, { method: 'DELETE' });
+            if (res.ok) {
+                const logs = await res.json();
+                renderHealthLogs(logs);
+                loadHealthSummary();
+            }
+            closeDeleteHealthModal();
+        }
+
+        document.getElementById('deleteHealthModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteHealthModal();
         });
 
         // ---------------- HOUSING ----------------
@@ -536,10 +698,167 @@
             document.getElementById('grandDailyTotal').textContent = fmt(data.total_daily_expenses);
         }
 
+        // ---------------- HEALTH TRACKER ----------------
+        function toggleHabitButton(elId) {
+            const el = document.getElementById(elId);
+            const isOn = el.classList.contains('on');
+            const stateSpan = el.querySelector('.habit-toggle-state');
+            if (isOn) {
+                el.classList.remove('on');
+                el.classList.add('off');
+                stateSpan.textContent = 'No';
+            } else {
+                el.classList.remove('off');
+                el.classList.add('on');
+                stateSpan.textContent = 'Yes';
+            }
+        }
+
+        function setHabitButton(elId, value) {
+            const el = document.getElementById(elId);
+            const stateSpan = el.querySelector('.habit-toggle-state');
+            el.classList.remove('on', 'off');
+            if (value) {
+                el.classList.add('on');
+                stateSpan.textContent = 'Yes';
+            } else {
+                el.classList.add('off');
+                stateSpan.textContent = 'No';
+            }
+        }
+
+        function todayLocalISO() {
+            const d = new Date();
+            const offsetMs = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offsetMs).toISOString().slice(0, 10);
+        }
+
+        async function loadHealthLogs() {
+            const res = await fetch('/api/health');
+            const logs = await res.json();
+            renderHealthLogs(logs);
+        }
+
+        function renderHealthLogs(logs) {
+            const list = document.getElementById('healthLogsList');
+            if (!logs.length) {
+                list.innerHTML = `<p class="text-sm text-slate-400 text-center">No health logs yet. Start tracking above!</p>`;
+                return;
+            }
+            list.innerHTML = logs.map(l => healthLogRowHtml(l)).join('');
+        }
+
+        function healthLogRowHtml(l) {
+            const dateLabel = formatLogDate(l.log_date);
+            const chip = (on, label) => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full ${on ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}">${label}</span>`;
+
+            return `
+                <div class="bg-slate-50 rounded-lg px-3 py-2.5 text-sm" id="health-log-${l.id}">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold text-slate-700">${dateLabel}</p>
+                            <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                ${chip(l.sugar_cut, '🍬 Sugar Cut')}
+                                ${chip(l.no_outside_food, '🍔 No Outside Food')}
+                                ${chip(l.fruits_eaten, '🍎 Fruits')}
+                            </div>
+                            ${l.notes ? `<p class="text-xs text-slate-400 mt-1.5">${escapeHtml(l.notes)}</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="editHealthLog('${l.log_date}')" class="text-indigo-400 hover:text-indigo-600 font-bold text-xs p-1">✏️</button>
+                            <button onclick="openDeleteHealthModal(${l.id}, '${dateLabel}')" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">✕</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatLogDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function editHealthLog(logDate) {
+            document.getElementById('healthDate').value = logDate;
+            fetch('/api/health').then(r => r.json()).then(logs => {
+                const log = logs.find(l => l.log_date === logDate);
+                if (log) {
+                    setHabitButton('toggleSugarCut', log.sugar_cut);
+                    setHabitButton('toggleOutsideFood', log.no_outside_food);
+                    setHabitButton('toggleFruits', log.fruits_eaten);
+                    document.getElementById('healthNotes').value = log.notes || '';
+                }
+            });
+            document.getElementById('healthDate').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function saveHealthLog() {
+            const errEl = document.getElementById('healthErrorMsg');
+            const msgEl = document.getElementById('healthSaveMsg');
+            errEl.classList.add('hidden');
+
+            const log_date = document.getElementById('healthDate').value;
+            if (!log_date) {
+                errEl.textContent = 'Please select a date.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const sugar_cut = document.getElementById('toggleSugarCut').classList.contains('on');
+            const no_outside_food = document.getElementById('toggleOutsideFood').classList.contains('on');
+            const fruits_eaten = document.getElementById('toggleFruits').classList.contains('on');
+            const notes = document.getElementById('healthNotes').value.trim();
+
+            const res = await fetch('/api/health', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ log_date, sugar_cut, no_outside_food, fruits_eaten, notes })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                errEl.textContent = data.error || 'Could not save log.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            renderHealthLogs(data);
+            loadHealthSummary();
+
+            msgEl.classList.remove('hidden');
+            setTimeout(() => msgEl.classList.add('hidden'), 2000);
+
+            // Reset form for next entry
+            setHabitButton('toggleSugarCut', false);
+            setHabitButton('toggleOutsideFood', false);
+            setHabitButton('toggleFruits', false);
+            document.getElementById('healthNotes').value = '';
+        }
+
+        async function loadHealthSummary() {
+            const res = await fetch('/api/health/summary');
+            const data = await res.json();
+
+            const total = data.total_days_tracked || 0;
+            document.getElementById('statTotalDays').textContent = total;
+
+            document.getElementById('statSugarCut').textContent = `${data.sugar_cut_days} / ${total} days (${data.sugar_cut_pct}%)`;
+            document.getElementById('barSugarCut').style.width = `${data.sugar_cut_pct}%`;
+
+            document.getElementById('statOutsideFood').textContent = `${data.no_outside_food_days} / ${total} days (${data.no_outside_food_pct}%)`;
+            document.getElementById('barOutsideFood').style.width = `${data.no_outside_food_pct}%`;
+
+            document.getElementById('statFruits').textContent = `${data.fruits_eaten_days} / ${total} days (${data.fruits_eaten_pct}%)`;
+            document.getElementById('barFruits').style.width = `${data.fruits_eaten_pct}%`;
+        }
+
         // ---------------- INIT ----------------
         window.addEventListener('DOMContentLoaded', () => {
             loadHousing();
             loadDays();
+            document.getElementById('healthDate').value = todayLocalISO();
+            loadHealthLogs();
+            loadHealthSummary();
         });
     </script>
 

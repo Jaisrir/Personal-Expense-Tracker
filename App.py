@@ -85,6 +85,26 @@ class ExpenseItem(db.Model):
         }
 
 
+class HealthLog(db.Model):
+    """One row per calendar date tracking daily health habits."""
+    id = db.Column(db.Integer, primary_key=True)
+    log_date = db.Column(db.String(10), unique=True, nullable=False)  # format: YYYY-MM-DD
+    sugar_cut = db.Column(db.Boolean, default=False)          # True = sugar was avoided that day
+    no_outside_food = db.Column(db.Boolean, default=False)    # True = no outside food that day
+    fruits_eaten = db.Column(db.Boolean, default=False)       # True = ate fruits that day
+    notes = db.Column(db.String(300), default='')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "log_date": self.log_date,
+            "sugar_cut": self.sugar_cut,
+            "no_outside_food": self.no_outside_food,
+            "fruits_eaten": self.fruits_eaten,
+            "notes": self.notes or ''
+        }
+
+
 # ---------------------- ROUTES ----------------------
 
 @app.route('/')
@@ -284,6 +304,83 @@ def delete_item(item_id):
     db.session.delete(item)
     db.session.commit()
     return jsonify(day.to_dict())
+
+
+# ---- Health Tracker ----
+
+@app.route('/api/health', methods=['GET'])
+def get_health_logs():
+    logs = HealthLog.query.order_by(HealthLog.log_date.desc()).all()
+    return jsonify([l.to_dict() for l in logs])
+
+
+@app.route('/api/health', methods=['POST'])
+def save_health_log():
+    """Upsert a health log for a given calendar date."""
+    data = request.get_json()
+    log_date = (data.get('log_date') or '').strip()  # expected "YYYY-MM-DD"
+
+    if not log_date:
+        return jsonify({"error": "log_date is required"}), 400
+
+    sugar_cut = bool(data.get('sugar_cut', False))
+    no_outside_food = bool(data.get('no_outside_food', False))
+    fruits_eaten = bool(data.get('fruits_eaten', False))
+    notes = (data.get('notes') or '').strip()
+
+    log = HealthLog.query.filter_by(log_date=log_date).first()
+    if log:
+        log.sugar_cut = sugar_cut
+        log.no_outside_food = no_outside_food
+        log.fruits_eaten = fruits_eaten
+        log.notes = notes
+    else:
+        log = HealthLog(
+            log_date=log_date,
+            sugar_cut=sugar_cut,
+            no_outside_food=no_outside_food,
+            fruits_eaten=fruits_eaten,
+            notes=notes
+        )
+        db.session.add(log)
+
+    db.session.commit()
+
+    logs = HealthLog.query.order_by(HealthLog.log_date.desc()).all()
+    return jsonify([l.to_dict() for l in logs]), 201
+
+
+@app.route('/api/health/<int:log_id>', methods=['DELETE'])
+def delete_health_log(log_id):
+    log = HealthLog.query.get_or_404(log_id)
+    db.session.delete(log)
+    db.session.commit()
+
+    logs = HealthLog.query.order_by(HealthLog.log_date.desc()).all()
+    return jsonify([l.to_dict() for l in logs])
+
+
+@app.route('/api/health/summary', methods=['GET'])
+def get_health_summary():
+    logs = HealthLog.query.all()
+    total = len(logs)
+
+    sugar_cut_days = sum(1 for l in logs if l.sugar_cut)
+    no_outside_food_days = sum(1 for l in logs if l.no_outside_food)
+    fruits_eaten_days = sum(1 for l in logs if l.fruits_eaten)
+
+    def pct(count):
+        return round((count / total) * 100, 1) if total else 0
+
+    return jsonify({
+        "total_days_tracked": total,
+        "sugar_cut_days": sugar_cut_days,
+        "no_outside_food_days": no_outside_food_days,
+        "fruits_eaten_days": fruits_eaten_days,
+        "sugar_cut_pct": pct(sugar_cut_days),
+        "no_outside_food_pct": pct(no_outside_food_days),
+        "fruits_eaten_pct": pct(fruits_eaten_days)
+    })
 
 
 @app.route('/api/summary', methods=['GET'])
