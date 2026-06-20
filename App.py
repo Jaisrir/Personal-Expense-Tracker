@@ -113,8 +113,21 @@ class HealthLog(db.Model):
 # would never get their table created in Supabase, causing 500 errors
 # ("relation ... does not exist") even though older tables (Day, HousingInfo)
 # already existed from an earlier local run.
-with app.app_context():
-    db.create_all()
+#
+# Wrapped in try/except because gunicorn typically boots multiple worker
+# processes, and each one imports this module independently. If two workers
+# both see "table missing" at the same instant and both issue CREATE TABLE,
+# one of them will fail with "relation already exists" — an unhandled
+# exception here would crash that worker at boot (and keep crashing on every
+# restart afterward), which is what produces a 502 Bad Gateway from Render's
+# proxy. Swallowing the error here is safe: as long as one worker wins the
+# race, the table exists and every other worker can proceed normally.
+try:
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    print(f"[startup] db.create_all() skipped/failed (likely a race with "
+          f"another worker, safe to ignore if tables already exist): {e}")
 
 
 # ---------------------- ROUTES ----------------------
