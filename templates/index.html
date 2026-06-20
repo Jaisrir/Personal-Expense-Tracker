@@ -25,9 +25,9 @@
             .add-item-form input[type="number"] { flex: 1 1 calc(50% - 0.25rem); }
             .add-item-form button { flex: 1 1 calc(50% - 0.25rem); }
         }
-        .habit-toggle { cursor: pointer; user-select: none; transition: all 0.15s ease; }
-        .habit-toggle.on { background: #ecfdf5; border-color: #10b981; color: #047857; }
-        .habit-toggle.off { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
+        .habit-choice-btn { cursor: pointer; transition: all 0.15s ease; background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
+        .habit-choice-btn.selected-yes { background: #ecfdf5; border-color: #10b981; color: #047857; }
+        .habit-choice-btn.selected-no { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
@@ -225,21 +225,33 @@
                             class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                     </div>
 
-                    <div class="space-y-2 mb-4">
-                        <div id="toggleSugarCut" onclick="toggleHabitButton('toggleSugarCut')"
-                            class="habit-toggle off flex items-center justify-between border rounded-lg px-3 py-3">
-                            <span class="font-medium text-sm">🍬 Cut Sugar</span>
-                            <span class="habit-toggle-state text-xs font-bold uppercase">No</span>
+                    <div class="space-y-3 mb-4">
+                        <div>
+                            <p class="font-medium text-sm text-slate-700 mb-1.5">🍬 Cut Sugar?</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="sugarCutYes" onclick="setHabitChoice('sugarCut', true)"
+                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
+                                <button type="button" id="sugarCutNo" onclick="setHabitChoice('sugarCut', false)"
+                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
+                            </div>
                         </div>
-                        <div id="toggleOutsideFood" onclick="toggleHabitButton('toggleOutsideFood')"
-                            class="habit-toggle off flex items-center justify-between border rounded-lg px-3 py-3">
-                            <span class="font-medium text-sm">🍔 Avoided Outside Food</span>
-                            <span class="habit-toggle-state text-xs font-bold uppercase">No</span>
+                        <div>
+                            <p class="font-medium text-sm text-slate-700 mb-1.5">🍔 Avoided Outside Food?</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="outsideFoodYes" onclick="setHabitChoice('outsideFood', true)"
+                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
+                                <button type="button" id="outsideFoodNo" onclick="setHabitChoice('outsideFood', false)"
+                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
+                            </div>
                         </div>
-                        <div id="toggleFruits" onclick="toggleHabitButton('toggleFruits')"
-                            class="habit-toggle off flex items-center justify-between border rounded-lg px-3 py-3">
-                            <span class="font-medium text-sm">🍎 Ate Fruits</span>
-                            <span class="habit-toggle-state text-xs font-bold uppercase">No</span>
+                        <div>
+                            <p class="font-medium text-sm text-slate-700 mb-1.5">🍎 Ate Fruits?</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="fruitsYes" onclick="setHabitChoice('fruits', true)"
+                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
+                                <button type="button" id="fruitsNo" onclick="setHabitChoice('fruits', false)"
+                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
+                            </div>
                         </div>
                     </div>
 
@@ -699,32 +711,38 @@
         }
 
         // ---------------- HEALTH TRACKER ----------------
-        function toggleHabitButton(elId) {
-            const el = document.getElementById(elId);
-            const isOn = el.classList.contains('on');
-            const stateSpan = el.querySelector('.habit-toggle-state');
-            if (isOn) {
-                el.classList.remove('on');
-                el.classList.add('off');
-                stateSpan.textContent = 'No';
-            } else {
-                el.classList.remove('off');
-                el.classList.add('on');
-                stateSpan.textContent = 'Yes';
+        // Tracks the user's explicit choice for each habit: true, false, or null (not yet chosen)
+        const habitState = { sugarCut: null, outsideFood: null, fruits: null };
+
+        function setHabitChoice(habitKey, value) {
+            habitState[habitKey] = value;
+            renderHabitButtons(habitKey);
+        }
+
+        function renderHabitButtons(habitKey) {
+            const idMap = {
+                sugarCut: ['sugarCutYes', 'sugarCutNo'],
+                outsideFood: ['outsideFoodYes', 'outsideFoodNo'],
+                fruits: ['fruitsYes', 'fruitsNo']
+            };
+            const [yesId, noId] = idMap[habitKey];
+            const yesBtn = document.getElementById(yesId);
+            const noBtn = document.getElementById(noId);
+            yesBtn.classList.remove('selected-yes', 'selected-no');
+            noBtn.classList.remove('selected-yes', 'selected-no');
+
+            if (habitState[habitKey] === true) {
+                yesBtn.classList.add('selected-yes');
+            } else if (habitState[habitKey] === false) {
+                noBtn.classList.add('selected-no');
             }
         }
 
-        function setHabitButton(elId, value) {
-            const el = document.getElementById(elId);
-            const stateSpan = el.querySelector('.habit-toggle-state');
-            el.classList.remove('on', 'off');
-            if (value) {
-                el.classList.add('on');
-                stateSpan.textContent = 'Yes';
-            } else {
-                el.classList.add('off');
-                stateSpan.textContent = 'No';
-            }
+        function resetHabitButtons() {
+            habitState.sugarCut = null;
+            habitState.outsideFood = null;
+            habitState.fruits = null;
+            ['sugarCut', 'outsideFood', 'fruits'].forEach(renderHabitButtons);
         }
 
         function todayLocalISO() {
@@ -750,7 +768,7 @@
 
         function healthLogRowHtml(l) {
             const dateLabel = formatLogDate(l.log_date);
-            const chip = (on, label) => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full ${on ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}">${label}</span>`;
+            const chip = (on, label) => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full ${on ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-400'}">${label}: ${on ? 'Yes' : 'No'}</span>`;
 
             return `
                 <div class="bg-slate-50 rounded-lg px-3 py-2.5 text-sm" id="health-log-${l.id}">
@@ -783,9 +801,10 @@
             fetch('/api/health').then(r => r.json()).then(logs => {
                 const log = logs.find(l => l.log_date === logDate);
                 if (log) {
-                    setHabitButton('toggleSugarCut', log.sugar_cut);
-                    setHabitButton('toggleOutsideFood', log.no_outside_food);
-                    setHabitButton('toggleFruits', log.fruits_eaten);
+                    habitState.sugarCut = log.sugar_cut;
+                    habitState.outsideFood = log.no_outside_food;
+                    habitState.fruits = log.fruits_eaten;
+                    ['sugarCut', 'outsideFood', 'fruits'].forEach(renderHabitButtons);
                     document.getElementById('healthNotes').value = log.notes || '';
                 }
             });
@@ -804,9 +823,15 @@
                 return;
             }
 
-            const sugar_cut = document.getElementById('toggleSugarCut').classList.contains('on');
-            const no_outside_food = document.getElementById('toggleOutsideFood').classList.contains('on');
-            const fruits_eaten = document.getElementById('toggleFruits').classList.contains('on');
+            if (habitState.sugarCut === null || habitState.outsideFood === null || habitState.fruits === null) {
+                errEl.textContent = 'Please choose Yes or No for all three habits.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const sugar_cut = habitState.sugarCut;
+            const no_outside_food = habitState.outsideFood;
+            const fruits_eaten = habitState.fruits;
             const notes = document.getElementById('healthNotes').value.trim();
 
             const res = await fetch('/api/health', {
@@ -828,10 +853,8 @@
             msgEl.classList.remove('hidden');
             setTimeout(() => msgEl.classList.add('hidden'), 2000);
 
-            // Reset form for next entry
-            setHabitButton('toggleSugarCut', false);
-            setHabitButton('toggleOutsideFood', false);
-            setHabitButton('toggleFruits', false);
+            // Reset form for next entry — no defaults, user must choose again
+            resetHabitButtons();
             document.getElementById('healthNotes').value = '';
         }
 

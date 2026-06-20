@@ -105,6 +105,18 @@ class HealthLog(db.Model):
         }
 
 
+# ---------------------- DB INIT ----------------------
+# IMPORTANT: This must run at import time, not only inside `if __name__ ==
+# '__main__'`. On Render (and most production setups) the app is started by
+# gunicorn via `app:app`, which imports this module but never executes the
+# __main__ block below. Without this, newly added models (like HealthLog)
+# would never get their table created in Supabase, causing 500 errors
+# ("relation ... does not exist") even though older tables (Day, HousingInfo)
+# already existed from an earlier local run.
+with app.app_context():
+    db.create_all()
+
+
 # ---------------------- ROUTES ----------------------
 
 @app.route('/')
@@ -316,16 +328,26 @@ def get_health_logs():
 
 @app.route('/api/health', methods=['POST'])
 def save_health_log():
-    """Upsert a health log for a given calendar date."""
+    """Upsert a health log for a given calendar date.
+
+    sugar_cut / no_outside_food / fruits_eaten must each be sent explicitly
+    as true or false — the user is required to pick Yes or No on the
+    frontend, so there is no implicit default here.
+    """
     data = request.get_json()
     log_date = (data.get('log_date') or '').strip()  # expected "YYYY-MM-DD"
 
     if not log_date:
         return jsonify({"error": "log_date is required"}), 400
 
-    sugar_cut = bool(data.get('sugar_cut', False))
-    no_outside_food = bool(data.get('no_outside_food', False))
-    fruits_eaten = bool(data.get('fruits_eaten', False))
+    required_fields = ['sugar_cut', 'no_outside_food', 'fruits_eaten']
+    missing = [f for f in required_fields if not isinstance(data.get(f), bool)]
+    if missing:
+        return jsonify({"error": "Please select Yes or No for all three habits."}), 400
+
+    sugar_cut = data.get('sugar_cut')
+    no_outside_food = data.get('no_outside_food')
+    fruits_eaten = data.get('fruits_eaten')
     notes = (data.get('notes') or '').strip()
 
     log = HealthLog.query.filter_by(log_date=log_date).first()
