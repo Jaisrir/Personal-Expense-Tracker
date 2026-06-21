@@ -105,6 +105,32 @@ class HealthLog(db.Model):
         }
 
 
+class StudySession(db.Model):
+    """One row per study session logged for a JSpider topic on a calendar date."""
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(50), nullable=False)          # e.g. 'HTML', 'ReactJS'
+    log_date = db.Column(db.String(10), nullable=False)        # format: YYYY-MM-DD
+    subtopic = db.Column(db.String(200), nullable=False)       # what exactly was studied
+    hours = db.Column(db.Float, default=0.0)                   # hours spent
+    notes = db.Column(db.String(300), default='')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "topic": self.topic,
+            "log_date": self.log_date,
+            "subtopic": self.subtopic,
+            "hours": self.hours,
+            "notes": self.notes or ''
+        }
+
+
+# Fixed set of topics shown as cards in the Study Tracker tab. Keeping this
+# as a server-side allow-list (rather than letting the client send any
+# string) means a typo or stray request can't create a bogus new "topic".
+VALID_STUDY_TOPICS = ['HTML', 'CSS', 'JS', 'ReactJS', 'Java', 'SpringBoot', 'Hibernate', 'SQL']
+
+
 # ---------------------- DB INIT ----------------------
 # IMPORTANT: This must run at import time, not only inside `if __name__ ==
 # '__main__'`. On Render (and most production setups) the app is started by
@@ -415,6 +441,126 @@ def get_health_summary():
         "sugar_cut_pct": pct(sugar_cut_days),
         "no_outside_food_pct": pct(no_outside_food_days),
         "fruits_eaten_pct": pct(fruits_eaten_days)
+    })
+
+
+# ---- Study Tracker (JSpider) ----
+
+@app.route('/api/study/topics', methods=['GET'])
+def get_study_topics():
+    """Returns the fixed list of topics shown as cards on the frontend."""
+    return jsonify(VALID_STUDY_TOPICS)
+
+
+@app.route('/api/study', methods=['GET'])
+def get_study_sessions():
+    """Returns all logged study sessions, newest first.
+    Optional ?topic=HTML query param filters to a single topic.
+    """
+    topic = request.args.get('topic')
+    query = StudySession.query
+    if topic:
+        query = query.filter_by(topic=topic)
+    sessions = query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
+    return jsonify([s.to_dict() for s in sessions])
+
+
+@app.route('/api/study', methods=['POST'])
+def add_study_session():
+    data = request.get_json()
+
+    topic = (data.get('topic') or '').strip()
+    log_date = (data.get('log_date') or '').strip()  # expected "YYYY-MM-DD"
+    subtopic = (data.get('subtopic') or '').strip()
+    hours = data.get('hours')
+    notes = (data.get('notes') or '').strip()
+
+    if topic not in VALID_STUDY_TOPICS:
+        return jsonify({"error": f"topic must be one of {VALID_STUDY_TOPICS}"}), 400
+    if not log_date:
+        return jsonify({"error": "log_date is required"}), 400
+    if not subtopic:
+        return jsonify({"error": "Please describe what you studied"}), 400
+
+    try:
+        hours = float(hours) if hours not in (None, '') else 0.0
+    except (ValueError, TypeError):
+        return jsonify({"error": "hours must be a number"}), 400
+
+    session = StudySession(
+        topic=topic,
+        log_date=log_date,
+        subtopic=subtopic,
+        hours=hours,
+        notes=notes
+    )
+    db.session.add(session)
+    db.session.commit()
+
+    sessions = StudySession.query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
+    return jsonify([s.to_dict() for s in sessions]), 201
+
+
+@app.route('/api/study/<int:session_id>', methods=['PUT'])
+def edit_study_session(session_id):
+    session = StudySession.query.get_or_404(session_id)
+    data = request.get_json()
+
+    topic = (data.get('topic') or session.topic).strip()
+    log_date = (data.get('log_date') or session.log_date).strip()
+    subtopic = (data.get('subtopic') or '').strip()
+    hours = data.get('hours')
+    notes = (data.get('notes') or '').strip()
+
+    if topic not in VALID_STUDY_TOPICS:
+        return jsonify({"error": f"topic must be one of {VALID_STUDY_TOPICS}"}), 400
+    if not subtopic:
+        return jsonify({"error": "Please describe what you studied"}), 400
+
+    try:
+        hours = float(hours) if hours not in (None, '') else 0.0
+    except (ValueError, TypeError):
+        return jsonify({"error": "hours must be a number"}), 400
+
+    session.topic = topic
+    session.log_date = log_date
+    session.subtopic = subtopic
+    session.hours = hours
+    session.notes = notes
+    db.session.commit()
+
+    sessions = StudySession.query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
+    return jsonify([s.to_dict() for s in sessions])
+
+
+@app.route('/api/study/<int:session_id>', methods=['DELETE'])
+def delete_study_session(session_id):
+    session = StudySession.query.get_or_404(session_id)
+    db.session.delete(session)
+    db.session.commit()
+
+    sessions = StudySession.query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
+    return jsonify([s.to_dict() for s in sessions])
+
+
+@app.route('/api/study/summary', methods=['GET'])
+def get_study_summary():
+    """Per-topic session count and total hours, plus overall totals."""
+    sessions = StudySession.query.all()
+
+    per_topic = {t: {"sessions": 0, "hours": 0.0} for t in VALID_STUDY_TOPICS}
+    for s in sessions:
+        if s.topic in per_topic:
+            per_topic[s.topic]["sessions"] += 1
+            per_topic[s.topic]["hours"] += (s.hours or 0.0)
+
+    total_sessions = len(sessions)
+    total_hours = sum(s.hours or 0.0 for s in sessions)
+
+    return jsonify({
+        "per_topic": per_topic,
+        "total_sessions": total_sessions,
+        "total_hours": total_hours
     })
 
 
