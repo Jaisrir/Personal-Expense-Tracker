@@ -28,6 +28,17 @@
         .habit-choice-btn { cursor: pointer; transition: all 0.15s ease; background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
         .habit-choice-btn.selected-yes { background: #ecfdf5; border-color: #10b981; color: #047857; }
         .habit-choice-btn.selected-no { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
+        
+        /* Hide top tabs on mobile */
+        @media (max-width: 767px) {
+            .desktop-tabs { display: none !important; }
+        }
+        /* Show bottom nav only on mobile */
+        .mobile-bottom-nav { display: none; }
+        @media (max-width: 767px) {
+            .mobile-bottom-nav { display: flex; }
+            main { padding-bottom: 80px; } /* Space for bottom nav */
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
@@ -68,7 +79,7 @@
         </div>
     </div>
 
-    <div class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+    <main class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
 
         <!-- Header -->
         <header class="mb-6 sm:mb-8 text-center">
@@ -76,8 +87,8 @@
             <p class="text-slate-500 mt-1 text-sm sm:text-base">Track your housing costs and daily expenses in Bengaluru</p>
         </header>
 
-        <!-- Tabs -->
-        <div class="flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8 overflow-x-auto">
+        <!-- Desktop Tabs -->
+        <div class="desktop-tabs flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8 overflow-x-auto">
             <button id="tabDailyBtn" onclick="switchTab('daily')"
                 class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 tab-active transition-colors whitespace-nowrap">
                 📅 Daily Expenses
@@ -319,9 +330,11 @@
                         <span id="statTotalDays" class="font-extrabold">0</span>
                     </div>
 
-                    <p class="text-xs opacity-70 mt-4">
-                        * Percentages are based on all days you've logged so far.
-                    </p>
+                    <!-- Dynamic Health Quote Box -->
+                    <div id="healthQuoteBox" class="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center transition-all">
+                        <p id="healthQuoteEmoji" class="text-3xl mb-1">⏳</p>
+                        <p id="healthQuoteText" class="text-sm font-medium">Log today's habits to see your motivation!</p>
+                    </div>
                 </div>
 
             </div>
@@ -344,6 +357,12 @@
             <!-- Topic Cards -->
             <div id="studyTopicsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"></div>
 
+            <!-- Dynamic Study Quote Box -->
+            <div id="studyQuoteBox" class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center mb-6 sm:mb-8 transition-all">
+                <p id="studyQuoteEmoji" class="text-3xl mb-1">🚀</p>
+                <p id="studyQuoteText" class="text-indigo-700 font-medium text-sm">Start logging to get encouraged!</p>
+            </div>
+
             <!-- History + Filter -->
             <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -359,6 +378,28 @@
         </section>
 
     </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-40">
+        <div class="grid grid-cols-4 h-16">
+            <button onclick="switchTab('daily')" id="mobileTabDaily" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
+                <span class="text-xl mb-0.5">📅</span>
+                <span class="text-[10px] font-semibold">Daily</span>
+            </button>
+            <button onclick="switchTab('housing')" id="mobileTabHousing" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
+                <span class="text-xl mb-0.5">🏠</span>
+                <span class="text-[10px] font-semibold">Housing</span>
+            </button>
+            <button onclick="switchTab('health')" id="mobileTabHealth" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
+                <span class="text-xl mb-0.5">🥗</span>
+                <span class="text-[10px] font-semibold">Health</span>
+            </button>
+            <button onclick="switchTab('study')" id="mobileTabStudy" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
+                <span class="text-xl mb-0.5">📚</span>
+                <span class="text-[10px] font-semibold">Study</span>
+            </button>
+        </div>
+    </nav>
 
     <!-- Add/Edit Study Session Modal -->
     <div id="studyFormModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
@@ -441,32 +482,59 @@
             const dailySection = document.getElementById('dailySection');
             const healthSection = document.getElementById('healthSection');
             const studySection = document.getElementById('studySection');
+            
+            // Desktop buttons
             const housingBtn = document.getElementById('tabHousingBtn');
             const dailyBtn = document.getElementById('tabDailyBtn');
             const healthBtn = document.getElementById('tabHealthBtn');
             const studyBtn = document.getElementById('tabStudyBtn');
 
+            // Mobile buttons
+            const mobileHousingBtn = document.getElementById('mobileTabHousing');
+            const mobileDailyBtn = document.getElementById('mobileTabDaily');
+            const mobileHealthBtn = document.getElementById('mobileTabHealth');
+            const mobileStudyBtn = document.getElementById('mobileTabStudy');
+
+            // Hide all sections
             dailySection.classList.add('hidden');
             housingSection.classList.add('hidden');
             healthSection.classList.add('hidden');
             studySection.classList.add('hidden');
+            
+            // Remove active state desktop
             dailyBtn.classList.remove('tab-active');
             housingBtn.classList.remove('tab-active');
             healthBtn.classList.remove('tab-active');
             studyBtn.classList.remove('tab-active');
 
+            // Remove active state mobile (set to gray)
+            [mobileDailyBtn, mobileHousingBtn, mobileHealthBtn, mobileStudyBtn].forEach(btn => {
+                btn.classList.remove('text-indigo-600', 'font-bold');
+                btn.classList.add('text-slate-400');
+            });
+
             if (tab === 'housing') {
                 housingSection.classList.remove('hidden');
                 housingBtn.classList.add('tab-active');
+                mobileHousingBtn.classList.remove('text-slate-400');
+                mobileHousingBtn.classList.add('text-indigo-600', 'font-bold');
             } else if (tab === 'health') {
                 healthSection.classList.remove('hidden');
                 healthBtn.classList.add('tab-active');
+                mobileHealthBtn.classList.remove('text-slate-400');
+                mobileHealthBtn.classList.add('text-indigo-600', 'font-bold');
+                updateHealthQuote();
             } else if (tab === 'study') {
                 studySection.classList.remove('hidden');
                 studyBtn.classList.add('tab-active');
+                mobileStudyBtn.classList.remove('text-slate-400');
+                mobileStudyBtn.classList.add('text-indigo-600', 'font-bold');
+                updateStudyQuote();
             } else {
                 dailySection.classList.remove('hidden');
                 dailyBtn.classList.add('tab-active');
+                mobileDailyBtn.classList.remove('text-slate-400');
+                mobileDailyBtn.classList.add('text-indigo-600', 'font-bold');
             }
         }
 
@@ -486,7 +554,6 @@
             if (!pendingDeleteDayId) return;
             const res = await fetch(`/api/days/${pendingDeleteDayId}`, { method: 'DELETE' });
             if (res.ok) {
-                // Server returns re-numbered days — reload all cards
                 const days = await res.json();
                 const container = document.getElementById('daysContainer');
                 container.innerHTML = '';
@@ -496,7 +563,6 @@
             closeDeleteModal();
         }
 
-        // Close modal on backdrop click
         document.getElementById('deleteDayModal').addEventListener('click', function(e) {
             if (e.target === this) closeDeleteModal();
         });
@@ -744,7 +810,6 @@
             const day = await res.json();
             renderDayCard(day);
             updateGrandTotal();
-            // Scroll new card into view on mobile
             const card = document.getElementById(`day-card-${day.id}`);
             if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -822,12 +887,12 @@
         }
 
         // ---------------- HEALTH TRACKER ----------------
-        // Tracks the user's explicit choice for each habit: true, false, or null (not yet chosen)
         const habitState = { sugarCut: null, outsideFood: null, fruits: null };
 
         function setHabitChoice(habitKey, value) {
             habitState[habitKey] = value;
             renderHabitButtons(habitKey);
+            updateHealthQuote(); // Update quote immediately when user makes a choice
         }
 
         function renderHabitButtons(habitKey) {
@@ -917,6 +982,7 @@
                     habitState.fruits = log.fruits_eaten;
                     ['sugarCut', 'outsideFood', 'fruits'].forEach(renderHabitButtons);
                     document.getElementById('healthNotes').value = log.notes || '';
+                    updateHealthQuote();
                 }
             });
             document.getElementById('healthDate').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -964,9 +1030,9 @@
             msgEl.classList.remove('hidden');
             setTimeout(() => msgEl.classList.add('hidden'), 2000);
 
-            // Reset form for next entry — no defaults, user must choose again
             resetHabitButtons();
             document.getElementById('healthNotes').value = '';
+            updateHealthQuote();
         }
 
         async function loadHealthSummary() {
@@ -984,6 +1050,42 @@
 
             document.getElementById('statFruits').textContent = `${data.fruits_eaten_days} / ${total} days (${data.fruits_eaten_pct}%)`;
             document.getElementById('barFruits').style.width = `${data.fruits_eaten_pct}%`;
+            
+            updateHealthQuote();
+        }
+
+        // Dynamic Health Quote Logic
+        function updateHealthQuote() {
+            const box = document.getElementById('healthQuoteBox');
+            const emojiEl = document.getElementById('healthQuoteEmoji');
+            const textEl = document.getElementById('healthQuoteText');
+            
+            let emoji = "⏳";
+            let text = "Log today's habits to see your motivation!";
+            let bgColor = "bg-white/20";
+
+            if (habitState.sugarCut === false) {
+                emoji = "🍬";
+                text = "Oops! Sugar sneaks in fast. Don't worry, tomorrow is a fresh start. Try to cut it next time!";
+                bgColor = "bg-red-500/30";
+            } else if (habitState.sugarCut === true && habitState.outsideFood === true && habitState.fruits === true) {
+                emoji = "🌟";
+                text = "Amazing! You're taking great care of your body. Keep up the fantastic work!";
+                bgColor = "bg-emerald-500/30";
+            } else if (habitState.sugarCut === true) {
+                emoji = "🥗";
+                text = "Great job cutting sugar! Your future self will thank you for this.";
+                bgColor = "bg-emerald-500/30";
+            } else if (habitState.fruits === true) {
+                emoji = "🍎";
+                text = "Fruits are brain fuel! Keep eating healthy and stay energetic.";
+                bgColor = "bg-emerald-500/30";
+            }
+
+            emojiEl.textContent = emoji;
+            textEl.textContent = text;
+            // Reset classes and apply new color
+            box.className = `mt-4 ${bgColor} backdrop-blur-sm rounded-xl p-4 text-center transition-all`;
         }
 
         // ---------------- STUDY TRACKER ----------------
@@ -1172,6 +1274,45 @@
             const data = await res.json();
             renderStudyTopicCards(data.per_topic);
             document.getElementById('studyTotalHours').textContent = `${Number(data.total_hours).toFixed(1)} hrs`;
+            updateStudyQuote(data.total_hours);
+        }
+
+        // Dynamic Study Quote Logic
+        function updateStudyQuote(totalHours = 0) {
+            const box = document.getElementById('studyQuoteBox');
+            const emojiEl = document.getElementById('studyQuoteEmoji');
+            const textEl = document.getElementById('studyQuoteText');
+            
+            let emoji = "🚀";
+            let text = "Start logging to get encouraged!";
+            let bgColor = "bg-indigo-50";
+            let borderColor = "border-indigo-100";
+            let textColor = "text-indigo-700";
+
+            if (totalHours === 0) {
+                emoji = "🚀";
+                text = "Ready to learn? Log your first session today!";
+            } else if (totalHours < 5) {
+                emoji = "🌱";
+                text = "Great start! Every expert was once a beginner. Keep going!";
+            } else if (totalHours < 15) {
+                emoji = "🔥";
+                text = "You're building serious momentum. Keep up the great work!";
+            } else if (totalHours < 30) {
+                emoji = "💪";
+                text = "Deep work pays off! You're doing amazing, don't stop now.";
+            } else {
+                emoji = "🏆";
+                text = "Outstanding dedication! You are mastering your craft.";
+                bgColor = "bg-emerald-50";
+                borderColor = "border-emerald-200";
+                textColor = "text-emerald-700";
+            }
+
+            emojiEl.textContent = emoji;
+            textEl.textContent = text;
+            box.className = `${bgColor} ${borderColor} border rounded-xl p-4 text-center mb-6 sm:mb-8 transition-all`;
+            textEl.className = `${textColor} font-medium text-sm`;
         }
 
         // ---------------- INIT ----------------
@@ -1183,6 +1324,8 @@
             loadHealthSummary();
             loadStudyTopics().then(() => loadStudySummary());
             loadStudySessions();
+            updateStudyQuote(0); // Initial quote
+            updateHealthQuote(); // Initial quote
         });
     </script>
 
