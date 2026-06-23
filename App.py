@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from dotenv import load_dotenv
@@ -9,17 +9,9 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 app = Flask(__name__)
 
-# ---------------------- DATABASE CONFIG ----------------------
-# Set the DATABASE_URL environment variable to your Supabase Postgres
-# connection string to use Supabase. Example:
-#   postgresql://postgres:[email protected]:5432/postgres
-#
-# If DATABASE_URL is not set, the app falls back to a local SQLite file
-# (expenses.db) so it keeps working without any extra setup.
 database_url = os.environ.get('DATABASE_URL')
 
 if database_url:
-    # SQLAlchemy + psycopg2 require the "postgresql://" scheme (not "postgres://")
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
@@ -27,6 +19,12 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'expenses.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Upload folder for study notes
+UPLOAD_FOLDER = os.path.join(basedir, 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md', 'docx', 'doc', 'png', 'jpg', 'jpeg', 'pptx', 'xlsx', 'csv', 'html', 'py', 'java', 'js', 'zip'}
 
 db = SQLAlchemy(app)
 
@@ -41,17 +39,12 @@ class HousingInfo(db.Model):
 
 class RentPayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    month = db.Column(db.String(7), nullable=False)   # format: YYYY-MM
-    paid_on = db.Column(db.String(10), nullable=False)  # format: YYYY-MM-DD
+    month = db.Column(db.String(7), nullable=False)
+    paid_on = db.Column(db.String(10), nullable=False)
     amount = db.Column(db.Float, nullable=False)
 
     def to_dict(self):
-        return {
-            "id": self.id,
-            "month": self.month,
-            "paid_on": self.paid_on,
-            "amount": self.amount
-        }
+        return {"id": self.id, "month": self.month, "paid_on": self.paid_on, "amount": self.amount}
 
 
 class Day(db.Model):
@@ -78,20 +71,15 @@ class ExpenseItem(db.Model):
     amount = db.Column(db.Float, nullable=False)
 
     def to_dict(self):
-        return {
-            "id": self.id,
-            "item_name": self.item_name,
-            "amount": self.amount
-        }
+        return {"id": self.id, "item_name": self.item_name, "amount": self.amount}
 
 
 class HealthLog(db.Model):
-    """One row per calendar date tracking daily health habits."""
     id = db.Column(db.Integer, primary_key=True)
-    log_date = db.Column(db.String(10), unique=True, nullable=False)  # format: YYYY-MM-DD
-    sugar_cut = db.Column(db.Boolean, default=False)          # True = sugar was avoided that day
-    no_outside_food = db.Column(db.Boolean, default=False)    # True = no outside food that day
-    fruits_eaten = db.Column(db.Boolean, default=False)       # True = ate fruits that day
+    log_date = db.Column(db.String(10), unique=True, nullable=False)
+    sugar_cut = db.Column(db.Boolean, default=False)
+    no_outside_food = db.Column(db.Boolean, default=False)
+    fruits_eaten = db.Column(db.Boolean, default=False)
     notes = db.Column(db.String(300), default='')
 
     def to_dict(self):
@@ -106,12 +94,11 @@ class HealthLog(db.Model):
 
 
 class StudySession(db.Model):
-    """One row per study session logged for a JSpider topic on a calendar date."""
     id = db.Column(db.Integer, primary_key=True)
-    topic = db.Column(db.String(50), nullable=False)          # e.g. 'HTML', 'ReactJS'
-    log_date = db.Column(db.String(10), nullable=False)        # format: YYYY-MM-DD
-    subtopic = db.Column(db.String(200), nullable=False)       # what exactly was studied
-    hours = db.Column(db.Float, default=0.0)                   # hours spent
+    topic = db.Column(db.String(50), nullable=False)
+    log_date = db.Column(db.String(10), nullable=False)
+    subtopic = db.Column(db.String(200), nullable=False)
+    hours = db.Column(db.Float, default=0.0)
     notes = db.Column(db.String(300), default='')
 
     def to_dict(self):
@@ -125,35 +112,53 @@ class StudySession(db.Model):
         }
 
 
-# Fixed set of topics shown as cards in the Study Tracker tab. Keeping this
-# as a server-side allow-list (rather than letting the client send any
-# string) means a typo or stray request can't create a bogus new "topic".
+class StudyNote(db.Model):
+    """Uploaded file note for a study topic."""
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(50), nullable=False)
+    filename = db.Column(db.String(300), nullable=False)      # original filename
+    stored_filename = db.Column(db.String(300), nullable=False)  # uuid filename on disk
+    uploaded_at = db.Column(db.String(10), nullable=False)    # YYYY-MM-DD
+    file_size = db.Column(db.Integer, default=0)              # bytes
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "topic": self.topic,
+            "filename": self.filename,
+            "stored_filename": self.stored_filename,
+            "uploaded_at": self.uploaded_at,
+            "file_size": self.file_size
+        }
+
+
+class CodeSnippet(db.Model):
+    """A code snippet / concept card stored for a study topic."""
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(50), nullable=False)
+    tag = db.Column(db.String(100), nullable=False)           # e.g. <a>
+    explanation = db.Column(db.Text, nullable=False)           # e.g. "used for hyperlinks"
+    example_code = db.Column(db.Text, nullable=False)          # actual code snippet
+    created_at = db.Column(db.String(10), nullable=False)     # YYYY-MM-DD
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "topic": self.topic,
+            "tag": self.tag,
+            "explanation": self.explanation,
+            "example_code": self.example_code,
+            "created_at": self.created_at
+        }
+
+
 VALID_STUDY_TOPICS = ['HTML', 'CSS', 'JS', 'ReactJS', 'Java', 'SpringBoot', 'Hibernate', 'SQL']
 
-
-# ---------------------- DB INIT ----------------------
-# IMPORTANT: This must run at import time, not only inside `if __name__ ==
-# '__main__'`. On Render (and most production setups) the app is started by
-# gunicorn via `app:app`, which imports this module but never executes the
-# __main__ block below. Without this, newly added models (like HealthLog)
-# would never get their table created in Supabase, causing 500 errors
-# ("relation ... does not exist") even though older tables (Day, HousingInfo)
-# already existed from an earlier local run.
-#
-# Wrapped in try/except because gunicorn typically boots multiple worker
-# processes, and each one imports this module independently. If two workers
-# both see "table missing" at the same instant and both issue CREATE TABLE,
-# one of them will fail with "relation already exists" — an unhandled
-# exception here would crash that worker at boot (and keep crashing on every
-# restart afterward), which is what produces a 502 Bad Gateway from Render's
-# proxy. Swallowing the error here is safe: as long as one worker wins the
-# race, the table exists and every other worker can proceed normally.
 try:
     with app.app_context():
         db.create_all()
 except Exception as e:
-    print(f"[startup] db.create_all() skipped/failed (likely a race with "
-          f"another worker, safe to ignore if tables already exist): {e}")
+    print(f"[startup] db.create_all() skipped/failed: {e}")
 
 
 # ---------------------- ROUTES ----------------------
@@ -163,19 +168,15 @@ def index():
     return render_template('index.html')
 
 
-# ---- Housing Info ----
+# ---- Housing ----
 
 @app.route('/api/housing', methods=['GET'])
 def get_housing():
     housing = HousingInfo.query.first()
     payments = RentPayment.query.order_by(RentPayment.month.asc()).all()
-
-    monthly_rent = housing.monthly_rent if housing else 0
-    security_advance = housing.security_advance if housing else 0
-
     return jsonify({
-        "monthly_rent": monthly_rent,
-        "security_advance": security_advance,
+        "monthly_rent": housing.monthly_rent if housing else 0,
+        "security_advance": housing.security_advance if housing else 0,
         "payments": [p.to_dict() for p in payments]
     })
 
@@ -185,7 +186,6 @@ def save_housing():
     data = request.get_json()
     monthly_rent = float(data.get('monthly_rent', 0) or 0)
     security_advance = float(data.get('security_advance', 0) or 0)
-
     housing = HousingInfo.query.first()
     if not housing:
         housing = HousingInfo(monthly_rent=monthly_rent, security_advance=security_advance)
@@ -193,46 +193,29 @@ def save_housing():
     else:
         housing.monthly_rent = monthly_rent
         housing.security_advance = security_advance
-
     db.session.commit()
-
     payments = RentPayment.query.order_by(RentPayment.month.asc()).all()
-
-    return jsonify({
-        "monthly_rent": housing.monthly_rent,
-        "security_advance": housing.security_advance,
-        "payments": [p.to_dict() for p in payments]
-    })
+    return jsonify({"monthly_rent": housing.monthly_rent, "security_advance": housing.security_advance, "payments": [p.to_dict() for p in payments]})
 
 
 @app.route('/api/housing/payments', methods=['POST'])
 def add_rent_payment():
     data = request.get_json()
-    month = (data.get('month') or '').strip()       # expected "YYYY-MM"
-    paid_on = (data.get('paid_on') or '').strip()   # expected "YYYY-MM-DD"
-
+    month = (data.get('month') or '').strip()
+    paid_on = (data.get('paid_on') or '').strip()
     if not month or not paid_on:
         return jsonify({"error": "month and paid_on are required"}), 400
-
     housing = HousingInfo.query.first()
     if not housing:
-        return jsonify({"error": "Please save housing details (monthly rent) first"}), 400
-
+        return jsonify({"error": "Please save housing details first"}), 400
     existing = RentPayment.query.filter_by(month=month).first()
     if existing:
         return jsonify({"error": f"A payment for {month} already exists"}), 400
-
     payment = RentPayment(month=month, paid_on=paid_on, amount=housing.monthly_rent)
     db.session.add(payment)
     db.session.commit()
-
     payments = RentPayment.query.order_by(RentPayment.month.asc()).all()
-
-    return jsonify({
-        "monthly_rent": housing.monthly_rent,
-        "security_advance": housing.security_advance,
-        "payments": [p.to_dict() for p in payments]
-    }), 201
+    return jsonify({"monthly_rent": housing.monthly_rent, "security_advance": housing.security_advance, "payments": [p.to_dict() for p in payments]}), 201
 
 
 @app.route('/api/housing/payments/<int:payment_id>', methods=['DELETE'])
@@ -240,30 +223,21 @@ def delete_rent_payment(payment_id):
     payment = RentPayment.query.get_or_404(payment_id)
     db.session.delete(payment)
     db.session.commit()
-
     housing = HousingInfo.query.first()
     payments = RentPayment.query.order_by(RentPayment.month.asc()).all()
-
-    return jsonify({
-        "monthly_rent": housing.monthly_rent if housing else 0,
-        "security_advance": housing.security_advance if housing else 0,
-        "payments": [p.to_dict() for p in payments]
-    })
+    return jsonify({"monthly_rent": housing.monthly_rent if housing else 0, "security_advance": housing.security_advance if housing else 0, "payments": [p.to_dict() for p in payments]})
 
 
-# ---- Days & Daily Expenses ----
+# ---- Days & Expenses ----
 
 @app.route('/api/days', methods=['GET'])
 def get_days():
     days = Day.query.order_by(Day.day_number.asc()).all()
-
     if not days:
-        # Auto-create Day 1 if nothing exists yet
         day1 = Day(day_number=1)
         db.session.add(day1)
         db.session.commit()
         days = [day1]
-
     return jsonify([day.to_dict() for day in days])
 
 
@@ -272,25 +246,19 @@ def delete_day(day_id):
     day = Day.query.get_or_404(day_id)
     db.session.delete(day)
     db.session.commit()
-
-    # Re-number remaining days sequentially
     remaining = Day.query.order_by(Day.day_number.asc()).all()
     for i, d in enumerate(remaining, start=1):
         d.day_number = i
     db.session.commit()
-
     return jsonify([d.to_dict() for d in remaining])
 
 
 @app.route('/api/days', methods=['POST'])
 def add_day():
     last_day = Day.query.order_by(Day.day_number.desc()).first()
-    new_day_number = (last_day.day_number + 1) if last_day else 1
-
-    new_day = Day(day_number=new_day_number)
+    new_day = Day(day_number=(last_day.day_number + 1) if last_day else 1)
     db.session.add(new_day)
     db.session.commit()
-
     return jsonify(new_day.to_dict()), 201
 
 
@@ -298,22 +266,17 @@ def add_day():
 def add_item(day_id):
     day = Day.query.get_or_404(day_id)
     data = request.get_json()
-
     item_name = (data.get('item_name') or '').strip()
     amount = data.get('amount')
-
     if not item_name or amount is None:
         return jsonify({"error": "item_name and amount are required"}), 400
-
     try:
         amount = float(amount)
     except (ValueError, TypeError):
         return jsonify({"error": "amount must be a number"}), 400
-
     new_item = ExpenseItem(day_id=day.id, item_name=item_name, amount=amount)
     db.session.add(new_item)
     db.session.commit()
-
     return jsonify(day.to_dict()), 201
 
 
@@ -329,22 +292,17 @@ def toggle_day_complete(day_id):
 def edit_item(item_id):
     item = ExpenseItem.query.get_or_404(item_id)
     data = request.get_json()
-
     item_name = (data.get('item_name') or '').strip()
     amount = data.get('amount')
-
     if not item_name or amount is None:
         return jsonify({"error": "item_name and amount are required"}), 400
-
     try:
         amount = float(amount)
     except (ValueError, TypeError):
         return jsonify({"error": "amount must be a number"}), 400
-
     item.item_name = item_name
     item.amount = amount
     db.session.commit()
-
     return jsonify(item.day.to_dict())
 
 
@@ -357,7 +315,7 @@ def delete_item(item_id):
     return jsonify(day.to_dict())
 
 
-# ---- Health Tracker ----
+# ---- Health ----
 
 @app.route('/api/health', methods=['GET'])
 def get_health_logs():
@@ -367,46 +325,24 @@ def get_health_logs():
 
 @app.route('/api/health', methods=['POST'])
 def save_health_log():
-    """Upsert a health log for a given calendar date.
-
-    sugar_cut / no_outside_food / fruits_eaten must each be sent explicitly
-    as true or false — the user is required to pick Yes or No on the
-    frontend, so there is no implicit default here.
-    """
     data = request.get_json()
-    log_date = (data.get('log_date') or '').strip()  # expected "YYYY-MM-DD"
-
+    log_date = (data.get('log_date') or '').strip()
     if not log_date:
         return jsonify({"error": "log_date is required"}), 400
-
     required_fields = ['sugar_cut', 'no_outside_food', 'fruits_eaten']
     missing = [f for f in required_fields if not isinstance(data.get(f), bool)]
     if missing:
         return jsonify({"error": "Please select Yes or No for all three habits."}), 400
-
-    sugar_cut = data.get('sugar_cut')
-    no_outside_food = data.get('no_outside_food')
-    fruits_eaten = data.get('fruits_eaten')
-    notes = (data.get('notes') or '').strip()
-
     log = HealthLog.query.filter_by(log_date=log_date).first()
     if log:
-        log.sugar_cut = sugar_cut
-        log.no_outside_food = no_outside_food
-        log.fruits_eaten = fruits_eaten
-        log.notes = notes
+        log.sugar_cut = data['sugar_cut']
+        log.no_outside_food = data['no_outside_food']
+        log.fruits_eaten = data['fruits_eaten']
+        log.notes = (data.get('notes') or '').strip()
     else:
-        log = HealthLog(
-            log_date=log_date,
-            sugar_cut=sugar_cut,
-            no_outside_food=no_outside_food,
-            fruits_eaten=fruits_eaten,
-            notes=notes
-        )
+        log = HealthLog(log_date=log_date, sugar_cut=data['sugar_cut'], no_outside_food=data['no_outside_food'], fruits_eaten=data['fruits_eaten'], notes=(data.get('notes') or '').strip())
         db.session.add(log)
-
     db.session.commit()
-
     logs = HealthLog.query.order_by(HealthLog.log_date.desc()).all()
     return jsonify([l.to_dict() for l in logs]), 201
 
@@ -416,7 +352,6 @@ def delete_health_log(log_id):
     log = HealthLog.query.get_or_404(log_id)
     db.session.delete(log)
     db.session.commit()
-
     logs = HealthLog.query.order_by(HealthLog.log_date.desc()).all()
     return jsonify([l.to_dict() for l in logs])
 
@@ -425,38 +360,27 @@ def delete_health_log(log_id):
 def get_health_summary():
     logs = HealthLog.query.all()
     total = len(logs)
-
-    sugar_cut_days = sum(1 for l in logs if l.sugar_cut)
-    no_outside_food_days = sum(1 for l in logs if l.no_outside_food)
-    fruits_eaten_days = sum(1 for l in logs if l.fruits_eaten)
-
-    def pct(count):
-        return round((count / total) * 100, 1) if total else 0
-
+    def pct(c): return round((c / total) * 100, 1) if total else 0
     return jsonify({
         "total_days_tracked": total,
-        "sugar_cut_days": sugar_cut_days,
-        "no_outside_food_days": no_outside_food_days,
-        "fruits_eaten_days": fruits_eaten_days,
-        "sugar_cut_pct": pct(sugar_cut_days),
-        "no_outside_food_pct": pct(no_outside_food_days),
-        "fruits_eaten_pct": pct(fruits_eaten_days)
+        "sugar_cut_days": sum(1 for l in logs if l.sugar_cut),
+        "no_outside_food_days": sum(1 for l in logs if l.no_outside_food),
+        "fruits_eaten_days": sum(1 for l in logs if l.fruits_eaten),
+        "sugar_cut_pct": pct(sum(1 for l in logs if l.sugar_cut)),
+        "no_outside_food_pct": pct(sum(1 for l in logs if l.no_outside_food)),
+        "fruits_eaten_pct": pct(sum(1 for l in logs if l.fruits_eaten))
     })
 
 
-# ---- Study Tracker (JSpider) ----
+# ---- Study Sessions ----
 
 @app.route('/api/study/topics', methods=['GET'])
 def get_study_topics():
-    """Returns the fixed list of topics shown as cards on the frontend."""
     return jsonify(VALID_STUDY_TOPICS)
 
 
 @app.route('/api/study', methods=['GET'])
 def get_study_sessions():
-    """Returns all logged study sessions, newest first.
-    Optional ?topic=HTML query param filters to a single topic.
-    """
     topic = request.args.get('topic')
     query = StudySession.query
     if topic:
@@ -468,35 +392,24 @@ def get_study_sessions():
 @app.route('/api/study', methods=['POST'])
 def add_study_session():
     data = request.get_json()
-
     topic = (data.get('topic') or '').strip()
-    log_date = (data.get('log_date') or '').strip()  # expected "YYYY-MM-DD"
+    log_date = (data.get('log_date') or '').strip()
     subtopic = (data.get('subtopic') or '').strip()
     hours = data.get('hours')
     notes = (data.get('notes') or '').strip()
-
     if topic not in VALID_STUDY_TOPICS:
         return jsonify({"error": f"topic must be one of {VALID_STUDY_TOPICS}"}), 400
     if not log_date:
         return jsonify({"error": "log_date is required"}), 400
     if not subtopic:
         return jsonify({"error": "Please describe what you studied"}), 400
-
     try:
         hours = float(hours) if hours not in (None, '') else 0.0
     except (ValueError, TypeError):
         return jsonify({"error": "hours must be a number"}), 400
-
-    session = StudySession(
-        topic=topic,
-        log_date=log_date,
-        subtopic=subtopic,
-        hours=hours,
-        notes=notes
-    )
+    session = StudySession(topic=topic, log_date=log_date, subtopic=subtopic, hours=hours, notes=notes)
     db.session.add(session)
     db.session.commit()
-
     sessions = StudySession.query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
     return jsonify([s.to_dict() for s in sessions]), 201
 
@@ -505,30 +418,25 @@ def add_study_session():
 def edit_study_session(session_id):
     session = StudySession.query.get_or_404(session_id)
     data = request.get_json()
-
     topic = (data.get('topic') or session.topic).strip()
     log_date = (data.get('log_date') or session.log_date).strip()
     subtopic = (data.get('subtopic') or '').strip()
     hours = data.get('hours')
     notes = (data.get('notes') or '').strip()
-
     if topic not in VALID_STUDY_TOPICS:
         return jsonify({"error": f"topic must be one of {VALID_STUDY_TOPICS}"}), 400
     if not subtopic:
         return jsonify({"error": "Please describe what you studied"}), 400
-
     try:
         hours = float(hours) if hours not in (None, '') else 0.0
     except (ValueError, TypeError):
         return jsonify({"error": "hours must be a number"}), 400
-
     session.topic = topic
     session.log_date = log_date
     session.subtopic = subtopic
     session.hours = hours
     session.notes = notes
     db.session.commit()
-
     sessions = StudySession.query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
     return jsonify([s.to_dict() for s in sessions])
 
@@ -538,60 +446,155 @@ def delete_study_session(session_id):
     session = StudySession.query.get_or_404(session_id)
     db.session.delete(session)
     db.session.commit()
-
     sessions = StudySession.query.order_by(StudySession.log_date.desc(), StudySession.id.desc()).all()
     return jsonify([s.to_dict() for s in sessions])
 
 
 @app.route('/api/study/summary', methods=['GET'])
 def get_study_summary():
-    """Per-topic session count and total hours, plus overall totals."""
     sessions = StudySession.query.all()
-
     per_topic = {t: {"sessions": 0, "hours": 0.0} for t in VALID_STUDY_TOPICS}
     for s in sessions:
         if s.topic in per_topic:
             per_topic[s.topic]["sessions"] += 1
             per_topic[s.topic]["hours"] += (s.hours or 0.0)
-
-    total_sessions = len(sessions)
-    total_hours = sum(s.hours or 0.0 for s in sessions)
-
     return jsonify({
         "per_topic": per_topic,
-        "total_sessions": total_sessions,
-        "total_hours": total_hours
+        "total_sessions": len(sessions),
+        "total_hours": sum(s.hours or 0.0 for s in sessions)
     })
 
+
+# ---- Study Notes (File Uploads) ----
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/api/study/<topic>/notes', methods=['GET'])
+def get_study_notes(topic):
+    if topic not in VALID_STUDY_TOPICS:
+        return jsonify({"error": "Invalid topic"}), 400
+    notes = StudyNote.query.filter_by(topic=topic).order_by(StudyNote.uploaded_at.desc()).all()
+    return jsonify([n.to_dict() for n in notes])
+
+
+@app.route('/api/study/<topic>/notes', methods=['POST'])
+def upload_study_note(topic):
+    if topic not in VALID_STUDY_TOPICS:
+        return jsonify({"error": "Invalid topic"}), 400
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    if not allowed_file(file.filename):
+        return jsonify({"error": f"File type not allowed"}), 400
+    import uuid
+    from werkzeug.utils import secure_filename
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    stored_filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
+    file.save(filepath)
+    file_size = os.path.getsize(filepath)
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    note = StudyNote(topic=topic, filename=secure_filename(file.filename), stored_filename=stored_filename, uploaded_at=today, file_size=file_size)
+    db.session.add(note)
+    db.session.commit()
+    notes = StudyNote.query.filter_by(topic=topic).order_by(StudyNote.uploaded_at.desc()).all()
+    return jsonify([n.to_dict() for n in notes]), 201
+
+
+@app.route('/api/study/notes/<int:note_id>/download', methods=['GET'])
+def download_study_note(note_id):
+    note = StudyNote.query.get_or_404(note_id)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], note.stored_filename, as_attachment=True, download_name=note.filename)
+
+
+@app.route('/api/study/notes/<int:note_id>', methods=['DELETE'])
+def delete_study_note(note_id):
+    note = StudyNote.query.get_or_404(note_id)
+    topic = note.topic
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], note.stored_filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    db.session.delete(note)
+    db.session.commit()
+    notes = StudyNote.query.filter_by(topic=topic).order_by(StudyNote.uploaded_at.desc()).all()
+    return jsonify([n.to_dict() for n in notes])
+
+
+# ---- Code Snippets ----
+
+@app.route('/api/study/<topic>/snippets', methods=['GET'])
+def get_code_snippets(topic):
+    if topic not in VALID_STUDY_TOPICS:
+        return jsonify({"error": "Invalid topic"}), 400
+    snippets = CodeSnippet.query.filter_by(topic=topic).order_by(CodeSnippet.id.desc()).all()
+    return jsonify([s.to_dict() for s in snippets])
+
+
+@app.route('/api/study/<topic>/snippets', methods=['POST'])
+def add_code_snippet(topic):
+    if topic not in VALID_STUDY_TOPICS:
+        return jsonify({"error": "Invalid topic"}), 400
+    data = request.get_json()
+    tag = (data.get('tag') or '').strip()
+    explanation = (data.get('explanation') or '').strip()
+    example_code = (data.get('example_code') or '').strip()
+    if not tag or not explanation or not example_code:
+        return jsonify({"error": "tag, explanation, and example_code are required"}), 400
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    snippet = CodeSnippet(topic=topic, tag=tag, explanation=explanation, example_code=example_code, created_at=today)
+    db.session.add(snippet)
+    db.session.commit()
+    snippets = CodeSnippet.query.filter_by(topic=topic).order_by(CodeSnippet.id.desc()).all()
+    return jsonify([s.to_dict() for s in snippets]), 201
+
+
+@app.route('/api/study/snippets/<int:snippet_id>', methods=['PUT'])
+def edit_code_snippet(snippet_id):
+    snippet = CodeSnippet.query.get_or_404(snippet_id)
+    data = request.get_json()
+    snippet.tag = (data.get('tag') or snippet.tag).strip()
+    snippet.explanation = (data.get('explanation') or snippet.explanation).strip()
+    snippet.example_code = (data.get('example_code') or snippet.example_code).strip()
+    db.session.commit()
+    snippets = CodeSnippet.query.filter_by(topic=snippet.topic).order_by(CodeSnippet.id.desc()).all()
+    return jsonify([s.to_dict() for s in snippets])
+
+
+@app.route('/api/study/snippets/<int:snippet_id>', methods=['DELETE'])
+def delete_code_snippet(snippet_id):
+    snippet = CodeSnippet.query.get_or_404(snippet_id)
+    topic = snippet.topic
+    db.session.delete(snippet)
+    db.session.commit()
+    snippets = CodeSnippet.query.filter_by(topic=topic).order_by(CodeSnippet.id.desc()).all()
+    return jsonify([s.to_dict() for s in snippets])
+
+
+# ---- Summary ----
 
 @app.route('/api/summary', methods=['GET'])
 def get_summary():
     housing = HousingInfo.query.first()
     days = Day.query.all()
     payments = RentPayment.query.all()
-
-    total_daily_expenses = sum(
-        item.amount for day in days for item in day.items
-    )
-
+    total_daily_expenses = sum(item.amount for day in days for item in day.items)
     monthly_rent = housing.monthly_rent if housing else 0
     security_advance = housing.security_advance if housing else 0
-    months_paid = len(payments)
-
     total_rent_paid = sum(p.amount for p in payments)
     total_paid_till_date = security_advance + total_rent_paid
-
     return jsonify({
         "monthly_rent": monthly_rent,
         "security_advance": security_advance,
-        "months_paid": months_paid,
+        "months_paid": len(payments),
         "total_paid_till_date": total_paid_till_date,
         "total_daily_expenses": total_daily_expenses,
         "grand_total": total_paid_till_date + total_daily_expenses
     })
 
-
-# ---------------------- MAIN ----------------------
 
 if __name__ == '__main__':
     with app.app_context():

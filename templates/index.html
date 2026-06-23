@@ -14,1320 +14,1131 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
         .tab-active { border-bottom: 3px solid #4f46e5; color: #4f46e5; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* Mobile: stack add-item form vertically */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 480px) {
             .add-item-form { flex-wrap: wrap; }
-            .add-item-form input[type="text"]  { flex: 1 1 100%; }
+            .add-item-form input[type="text"] { flex: 1 1 100%; }
             .add-item-form input[type="number"] { flex: 1 1 calc(50% - 0.25rem); }
             .add-item-form button { flex: 1 1 calc(50% - 0.25rem); }
         }
         .habit-choice-btn { cursor: pointer; transition: all 0.15s ease; background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
         .habit-choice-btn.selected-yes { background: #ecfdf5; border-color: #10b981; color: #047857; }
         .habit-choice-btn.selected-no { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
-        
-        /* Hide top tabs on mobile */
+
+        /* Hamburger Menu */
+        .hamburger-menu { display: none; }
         @media (max-width: 767px) {
             .desktop-tabs { display: none !important; }
+            .hamburger-menu { display: flex; }
         }
-        /* Show bottom nav only on mobile */
-        .mobile-bottom-nav { display: none; }
-        @media (max-width: 767px) {
-            .mobile-bottom-nav { display: flex; }
-            main { padding-bottom: 80px; } /* Space for bottom nav */
+
+        /* Slide-in drawer */
+        #mobileDrawer {
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
         }
+        #mobileDrawer.open { transform: translateX(0); }
+        #drawerOverlay { display: none; }
+        #drawerOverlay.open { display: block; }
+
+        /* Code editor styling */
+        .code-editor {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            tab-size: 2;
+            resize: vertical;
+        }
+        .snippet-card pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .file-drop-zone {
+            border: 2px dashed #c7d2fe;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .file-drop-zone.drag-over {
+            border-color: #4f46e5;
+            background: #eef2ff;
+        }
+
+        /* Topic page back button area */
+        .topic-page { display: none; }
+        .topic-page.active { display: block; }
+
+        /* Autocorrect highlight */
+        .autocorrect-suggestion {
+            background: #fef9c3;
+            border: 1px solid #fde047;
+            border-radius: 3px;
+            padding: 0 2px;
+            cursor: pointer;
+        }
+        /* Tab highlight on mobile nav drawer */
+        .drawer-nav-btn { transition: background 0.15s, color 0.15s; }
+        .drawer-nav-btn.active-drawer { background: #eef2ff; color: #4338ca; }
+
+        /* Snippet search highlight */
+        mark { background: #fef08a; border-radius: 2px; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
-    <!-- Delete Day Confirmation Modal -->
-    <div id="deleteDayModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
-        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Day?</h3>
-            <p class="text-slate-500 text-sm mb-6">This will permanently delete <strong id="deleteDayLabel">Day X</strong> and all its expenses. This cannot be undone.</p>
-            <div class="flex gap-3">
-                <button onclick="closeDeleteModal()"
-                    class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-                    Cancel
-                </button>
-                <button onclick="confirmDeleteDay()"
-                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
-                    Yes, Delete
-                </button>
-            </div>
-        </div>
+<!-- ========== HAMBURGER BUTTON (mobile only) ========== -->
+<div class="hamburger-menu fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm flex items-center justify-between px-4 py-3">
+    <button id="hamburgerBtn" onclick="toggleDrawer()" class="p-2 rounded-lg hover:bg-slate-100 transition-colors" aria-label="Menu">
+        <svg id="hamburgerIcon" class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+    <h1 id="mobilePageTitle" class="font-bold text-indigo-700 text-base truncate">💰 Expense Tracker</h1>
+    <div class="w-10"></div>
+</div>
+
+<!-- Drawer Overlay -->
+<div id="drawerOverlay" onclick="closeDrawer()" class="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"></div>
+
+<!-- Slide-in Drawer -->
+<div id="mobileDrawer" class="fixed top-0 left-0 bottom-0 w-72 bg-white z-50 shadow-2xl flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <span class="font-extrabold text-indigo-700 text-lg">💰 Tracker</span>
+        <button onclick="closeDrawer()" class="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
     </div>
-
-    <!-- Delete Health Log Confirmation Modal -->
-    <div id="deleteHealthModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
-        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Log?</h3>
-            <p class="text-slate-500 text-sm mb-6">This will permanently delete the health log for <strong id="deleteHealthLabel">this date</strong>. This cannot be undone.</p>
-            <div class="flex gap-3">
-                <button onclick="closeDeleteHealthModal()"
-                    class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-                    Cancel
-                </button>
-                <button onclick="confirmDeleteHealthLog()"
-                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
-                    Yes, Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <main class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-
-        <!-- Header -->
-        <header class="mb-6 sm:mb-8 text-center">
-            <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-indigo-700">💰 Personal Expense Tracker</h1>
-            <p class="text-slate-500 mt-1 text-sm sm:text-base">Track your housing costs and daily expenses in Bengaluru</p>
-        </header>
-
-        <!-- Desktop Tabs -->
-        <div class="desktop-tabs flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8 overflow-x-auto">
-            <button id="tabDailyBtn" onclick="switchTab('daily')"
-                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 tab-active transition-colors whitespace-nowrap">
-                📅 Daily Expenses
-            </button>
-            <button id="tabHousingBtn" onclick="switchTab('housing')"
-                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">
-                🏠 Housing & Fixed Costs
-            </button>
-            <button id="tabHealthBtn" onclick="switchTab('health')"
-                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">
-                🥗 Health Tracker
-            </button>
-            <button id="tabStudyBtn" onclick="switchTab('study')"
-                class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">
-                📚 Study Tracker
-            </button>
-        </div>
-
-        <!-- PART ONE: DAILY EXPENSES -->
-        <section id="dailySection" class="fade-in">
-
-            <!-- Overall Daily Summary -->
-            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div>
-                    <h2 class="text-base sm:text-lg font-bold text-slate-700">📅 Daily Expense Tracker</h2>
-                    <p class="text-slate-500 text-xs sm:text-sm">Add expenses for each day and track totals.</p>
-                </div>
-                <div class="sm:text-right">
-                    <p class="text-slate-500 text-xs sm:text-sm">Total Daily Expenses (All Days)</p>
-                    <p id="grandDailyTotal" class="text-xl sm:text-2xl font-extrabold text-indigo-600">₹0.00</p>
-                </div>
-            </div>
-
-            <!-- Days Container: 1 col on mobile, 2 col on md+ -->
-            <div id="daysContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"></div>
-
-            <!-- Add Next Day Button -->
-            <div class="mt-6 sm:mt-8 flex justify-center">
-                <button onclick="addNextDay()"
-                    class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3 px-6 sm:px-8 rounded-full shadow-lg text-base sm:text-lg transition-transform hover:scale-105">
-                    <span class="text-xl sm:text-2xl leading-none">+</span> Add Next Day
-                </button>
-            </div>
-
-        </section>
-
-        <!-- PART TWO: HOUSING -->
-        <section id="housingSection" class="hidden fade-in">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-
-                <!-- Input Card -->
-                <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
-                    <h2 class="text-base sm:text-lg font-bold mb-4 text-slate-700">🏠 Housing Details</h2>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Monthly Rent Amount (₹)</label>
-                        <input type="number" id="monthlyRent" min="0" step="0.01" placeholder="e.g. 18000"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                    </div>
-
-                    <div class="mb-5">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Security Advance (₹) <span class="text-xs text-slate-400">— one-time</span></label>
-                        <input type="number" id="securityAdvance" min="0" step="0.01" placeholder="e.g. 100000"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                    </div>
-
-                    <button onclick="saveHousing()"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm sm:text-base">
-                        Save Housing Details
-                    </button>
-                    <p id="housingSaveMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Saved successfully!</p>
-
-                    <hr class="my-5 border-slate-200">
-
-                    <div>
-                        <p class="text-sm font-semibold text-slate-700 mb-3">Rent Payment History</p>
-
-                        <div class="flex flex-col sm:flex-row gap-2 mb-3">
-                            <div class="flex-1">
-                                <label class="block text-xs text-slate-500 mb-1">Month</label>
-                                <input type="month" id="rentMonth"
-                                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-xs text-slate-500 mb-1">Date Paid</label>
-                                <input type="date" id="rentPaidOn"
-                                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                            </div>
-                        </div>
-
-                        <button onclick="addRentPayment()"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm sm:text-base">
-                            ➕ Mark This Month's Rent as Paid
-                        </button>
-                        <p id="rentPaymentMsg" class="text-red-500 text-sm mt-2 text-center hidden"></p>
-
-                        <div id="rentPaymentsList" class="mt-4 space-y-2 max-h-48 overflow-y-auto scrollbar-thin"></div>
-
-                        <p class="text-xs text-slate-400 mt-2 text-center">
-                            The security advance is a one-time payment and is never repeated.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Summary Card -->
-                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-md p-4 sm:p-6 text-white flex flex-col justify-center">
-                    <h2 class="text-base sm:text-lg font-bold mb-4">📊 Accommodation Summary</h2>
-
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between">
-                            <span class="opacity-80">Monthly Rent</span>
-                            <span id="summaryRent" class="font-semibold">₹0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="opacity-80">Security Advance (one-time)</span>
-                            <span id="summaryAdvance" class="font-semibold">₹0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="opacity-80">Months of Rent Paid</span>
-                            <span id="summaryMonthsPaid" class="font-semibold">0</span>
-                        </div>
-                        <hr class="border-white/30 my-2">
-                        <div class="flex justify-between text-base sm:text-lg">
-                            <span class="font-bold">Total Paid Till Date</span>
-                            <span id="summaryTotal" class="font-extrabold">₹0.00</span>
-                        </div>
-                    </div>
-
-                    <p class="text-xs opacity-70 mt-4">
-                        * Total = Security Advance (one-time) + (Monthly Rent × Months Paid).
-                    </p>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- PART THREE: HEALTH TRACKER -->
-        <section id="healthSection" class="hidden fade-in">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-
-                <!-- Log Entry Card -->
-                <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
-                    <h2 class="text-base sm:text-lg font-bold mb-1 text-slate-700">🥗 Log Today's Habits</h2>
-                    <p class="text-slate-500 text-xs sm:text-sm mb-4">Pick a date and mark the habits you kept.</p>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
-                        <input type="date" id="healthDate"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
-                    </div>
-
-                    <div class="space-y-3 mb-4">
-                        <div>
-                            <p class="font-medium text-sm text-slate-700 mb-1.5">🍬 Cut Sugar?</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" id="sugarCutYes" onclick="setHabitChoice('sugarCut', true)"
-                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
-                                <button type="button" id="sugarCutNo" onclick="setHabitChoice('sugarCut', false)"
-                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="font-medium text-sm text-slate-700 mb-1.5">🍔 Avoided Outside Food?</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" id="outsideFoodYes" onclick="setHabitChoice('outsideFood', true)"
-                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
-                                <button type="button" id="outsideFoodNo" onclick="setHabitChoice('outsideFood', false)"
-                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="font-medium text-sm text-slate-700 mb-1.5">🍎 Ate Fruits?</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" id="fruitsYes" onclick="setHabitChoice('fruits', true)"
-                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
-                                <button type="button" id="fruitsNo" onclick="setHabitChoice('fruits', false)"
-                                    class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Notes <span class="text-xs text-slate-400">(optional)</span></label>
-                        <input type="text" id="healthNotes" placeholder="e.g. felt great today"
-                            maxlength="300"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
-                    </div>
-
-                    <button onclick="saveHealthLog()"
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm sm:text-base">
-                        Save Log for This Date
-                    </button>
-                    <p id="healthSaveMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Saved successfully!</p>
-                    <p id="healthErrorMsg" class="text-red-500 text-sm mt-2 text-center hidden"></p>
-
-                    <hr class="my-5 border-slate-200">
-
-                    <p class="text-sm font-semibold text-slate-700 mb-3">History</p>
-                    <div id="healthLogsList" class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin"></div>
-                </div>
-
-                <!-- Stats Card -->
-                <div class="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl shadow-md p-4 sm:p-6 text-white flex flex-col justify-center">
-                    <h2 class="text-base sm:text-lg font-bold mb-4">📊 Habit Stats</h2>
-
-                    <div class="space-y-4 text-sm">
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="opacity-90">🍬 Sugar Cut</span>
-                                <span id="statSugarCut" class="font-semibold">0 / 0 days (0%)</span>
-                            </div>
-                            <div class="w-full bg-white/20 rounded-full h-2">
-                                <div id="barSugarCut" class="bg-white h-2 rounded-full" style="width:0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="opacity-90">🍔 Outside Food Avoided</span>
-                                <span id="statOutsideFood" class="font-semibold">0 / 0 days (0%)</span>
-                            </div>
-                            <div class="w-full bg-white/20 rounded-full h-2">
-                                <div id="barOutsideFood" class="bg-white h-2 rounded-full" style="width:0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="opacity-90">🍎 Fruits Eaten</span>
-                                <span id="statFruits" class="font-semibold">0 / 0 days (0%)</span>
-                            </div>
-                            <div class="w-full bg-white/20 rounded-full h-2">
-                                <div id="barFruits" class="bg-white h-2 rounded-full" style="width:0%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="border-white/30 my-4">
-                    <div class="flex justify-between text-base">
-                        <span class="font-bold">Total Days Tracked</span>
-                        <span id="statTotalDays" class="font-extrabold">0</span>
-                    </div>
-
-                    <!-- Dynamic Health Quote Box -->
-                    <div id="healthQuoteBox" class="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center transition-all">
-                        <p id="healthQuoteEmoji" class="text-3xl mb-1">⏳</p>
-                        <p id="healthQuoteText" class="text-sm font-medium">Log today's habits to see your motivation!</p>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- PART FOUR: STUDY TRACKER (JSpider) -->
-        <section id="studySection" class="hidden fade-in">
-
-            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div>
-                    <h2 class="text-base sm:text-lg font-bold text-slate-700">📚 JSpider Study Tracker</h2>
-                    <p class="text-slate-500 text-xs sm:text-sm">Tap a topic to log what you studied today.</p>
-                </div>
-                <div class="sm:text-right">
-                    <p class="text-slate-500 text-xs sm:text-sm">Total Hours Studied</p>
-                    <p id="studyTotalHours" class="text-xl sm:text-2xl font-extrabold text-indigo-600">0.0 hrs</p>
-                </div>
-            </div>
-
-            <!-- Topic Cards -->
-            <div id="studyTopicsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"></div>
-
-            <!-- Dynamic Study Quote Box -->
-            <div id="studyQuoteBox" class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center mb-6 sm:mb-8 transition-all">
-                <p id="studyQuoteEmoji" class="text-3xl mb-1">🚀</p>
-                <p id="studyQuoteText" class="text-indigo-700 font-medium text-sm">Start logging to get encouraged!</p>
-            </div>
-
-            <!-- History + Filter -->
-            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                    <p class="text-sm font-semibold text-slate-700">Study History</p>
-                    <select id="studyFilterTopic" onchange="loadStudySessions()"
-                        class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                        <option value="">All Topics</option>
-                    </select>
-                </div>
-                <div id="studySessionsList" class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin"></div>
-            </div>
-
-        </section>
-
-    </div>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-40">
-        <div class="grid grid-cols-4 h-16">
-            <button onclick="switchTab('daily')" id="mobileTabDaily" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
-                <span class="text-xl mb-0.5">📅</span>
-                <span class="text-[10px] font-semibold">Daily</span>
-            </button>
-            <button onclick="switchTab('housing')" id="mobileTabHousing" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
-                <span class="text-xl mb-0.5">🏠</span>
-                <span class="text-[10px] font-semibold">Housing</span>
-            </button>
-            <button onclick="switchTab('health')" id="mobileTabHealth" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
-                <span class="text-xl mb-0.5">🥗</span>
-                <span class="text-[10px] font-semibold">Health</span>
-            </button>
-            <button onclick="switchTab('study')" id="mobileTabStudy" class="flex flex-col items-center justify-center text-slate-400 active:text-indigo-600 transition-colors">
-                <span class="text-xl mb-0.5">📚</span>
-                <span class="text-[10px] font-semibold">Study</span>
-            </button>
-        </div>
+    <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <button id="drawerDaily" onclick="switchTab('daily'); closeDrawer();" class="drawer-nav-btn w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-700 active-drawer">
+            <span class="text-2xl">📅</span><span>Daily Expenses</span>
+        </button>
+        <button id="drawerHousing" onclick="switchTab('housing'); closeDrawer();" class="drawer-nav-btn w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-700">
+            <span class="text-2xl">🏠</span><span>Housing & Fixed</span>
+        </button>
+        <button id="drawerHealth" onclick="switchTab('health'); closeDrawer();" class="drawer-nav-btn w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-700">
+            <span class="text-2xl">🥗</span><span>Health Tracker</span>
+        </button>
+        <button id="drawerStudy" onclick="switchTab('study'); closeDrawer();" class="drawer-nav-btn w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-700">
+            <span class="text-2xl">📚</span><span>Study Tracker</span>
+        </button>
     </nav>
+    <div class="px-5 py-4 border-t border-slate-100">
+        <p class="text-xs text-slate-400 text-center">Bengaluru Personal Tracker</p>
+    </div>
+</div>
 
-    <!-- Add/Edit Study Session Modal -->
-    <div id="studyFormModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
-        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            <h3 class="text-lg font-bold text-slate-700 mb-1" id="studyModalTitle">📚 Log Study Session</h3>
-            <p class="text-slate-500 text-sm mb-4">Topic: <span id="studyModalTopic" class="font-semibold text-indigo-600">HTML</span></p>
-
-            <input type="hidden" id="studySessionId" value="">
-            <input type="hidden" id="studySessionTopic" value="">
-
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
-                <input type="date" id="studyDate"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-            </div>
-
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-slate-600 mb-1">What did you study?</label>
-                <input type="text" id="studySubtopic" placeholder="e.g. Flexbox, Hooks, JOINs"
-                    maxlength="200"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-            </div>
-
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-slate-600 mb-1">Hours Spent</label>
-                <input type="number" id="studyHours" min="0" step="0.25" placeholder="e.g. 1.5"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-slate-600 mb-1">Notes <span class="text-xs text-slate-400">(optional)</span></label>
-                <input type="text" id="studyNotes" placeholder="e.g. revise tomorrow"
-                    maxlength="300"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-            </div>
-
-            <p id="studyFormError" class="text-red-500 text-sm mb-3 text-center hidden"></p>
-
-            <div class="flex gap-3">
-                <button onclick="closeStudyModal()"
-                    class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-                    Cancel
-                </button>
-                <button onclick="submitStudySession()"
-                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
-                    Save
-                </button>
-            </div>
+<!-- ========== MODALS ========== -->
+<!-- Delete Day -->
+<div id="deleteDayModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Day?</h3>
+        <p class="text-slate-500 text-sm mb-6">This will permanently delete <strong id="deleteDayLabel">Day X</strong> and all its expenses.</p>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onclick="confirmDeleteDay()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg">Yes, Delete</button>
         </div>
     </div>
-
-    <!-- Delete Study Session Confirmation Modal -->
-    <div id="deleteStudyModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
-        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Session?</h3>
-            <p class="text-slate-500 text-sm mb-6">This will permanently delete this study session. This cannot be undone.</p>
-            <div class="flex gap-3">
-                <button onclick="closeDeleteStudyModal()"
-                    class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-                    Cancel
-                </button>
-                <button onclick="confirmDeleteStudySession()"
-                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors">
-                    Yes, Delete
-                </button>
-            </div>
+</div>
+<!-- Delete Health Log -->
+<div id="deleteHealthModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Log?</h3>
+        <p class="text-slate-500 text-sm mb-6">Permanently delete the health log for <strong id="deleteHealthLabel">this date</strong>?</p>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteHealthModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onclick="confirmDeleteHealthLog()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg">Yes, Delete</button>
         </div>
     </div>
+</div>
+<!-- Study Session Form -->
+<div id="studyFormModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-slate-700 mb-1" id="studyModalTitle">📚 Log Study Session</h3>
+        <p class="text-slate-500 text-sm mb-4">Topic: <span id="studyModalTopic" class="font-semibold text-indigo-600">HTML</span></p>
+        <input type="hidden" id="studySessionId">
+        <input type="hidden" id="studySessionTopic">
+        <div class="mb-3">
+            <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
+            <input type="date" id="studyDate" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+        </div>
+        <div class="mb-3">
+            <label class="block text-sm font-medium text-slate-600 mb-1">What did you study?</label>
+            <input type="text" id="studySubtopic" placeholder="e.g. Flexbox, Hooks, JOINs" maxlength="200" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+        </div>
+        <div class="mb-3">
+            <label class="block text-sm font-medium text-slate-600 mb-1">Hours Spent</label>
+            <input type="number" id="studyHours" min="0" step="0.25" placeholder="e.g. 1.5" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-600 mb-1">Notes <span class="text-xs text-slate-400">(optional)</span></label>
+            <input type="text" id="studyNotes" placeholder="e.g. revise tomorrow" maxlength="300" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+        </div>
+        <p id="studyFormError" class="text-red-500 text-sm mb-3 text-center hidden"></p>
+        <div class="flex gap-3">
+            <button onclick="closeStudyModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onclick="submitStudySession()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg">Save</button>
+        </div>
+    </div>
+</div>
+<!-- Delete Study Session -->
+<div id="deleteStudyModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Session?</h3>
+        <p class="text-slate-500 text-sm mb-6">This will permanently delete this study session.</p>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteStudyModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onclick="confirmDeleteStudySession()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+<!-- Delete Note -->
+<div id="deleteNoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Note?</h3>
+        <p class="text-slate-500 text-sm mb-6">This will permanently delete this uploaded file.</p>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteNoteModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onclick="confirmDeleteNote()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+<!-- Delete Snippet -->
+<div id="deleteSnippetModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Snippet?</h3>
+        <p class="text-slate-500 text-sm mb-6">This will permanently delete this code snippet.</p>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteSnippetModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onclick="confirmDeleteSnippet()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg">Yes, Delete</button>
+        </div>
+    </div>
+</div>
 
-    <script>
-        const fmt = (num) => '₹' + Number(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+<!-- ========== MAIN ========== -->
+<main class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8 md:pt-8 pt-16">
 
-        let pendingDeleteDayId = null;
-        let pendingDeleteHealthId = null;
-        let pendingDeleteStudyId = null;
+    <!-- Header (hidden on mobile – shown in hamburger bar) -->
+    <header class="mb-6 sm:mb-8 text-center hidden md:block">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-indigo-700">💰 Personal Expense Tracker</h1>
+        <p class="text-slate-500 mt-1 text-sm sm:text-base">Track your housing costs and daily expenses in Bengaluru</p>
+    </header>
 
-        // ---------------- TAB SWITCHING ----------------
-        function switchTab(tab) {
-            const housingSection = document.getElementById('housingSection');
-            const dailySection = document.getElementById('dailySection');
-            const healthSection = document.getElementById('healthSection');
-            const studySection = document.getElementById('studySection');
-            
-            // Desktop buttons
-            const housingBtn = document.getElementById('tabHousingBtn');
-            const dailyBtn = document.getElementById('tabDailyBtn');
-            const healthBtn = document.getElementById('tabHealthBtn');
-            const studyBtn = document.getElementById('tabStudyBtn');
+    <!-- Desktop Tabs -->
+    <div class="desktop-tabs flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8 overflow-x-auto">
+        <button id="tabDailyBtn" onclick="switchTab('daily')" class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 tab-active transition-colors whitespace-nowrap">📅 Daily Expenses</button>
+        <button id="tabHousingBtn" onclick="switchTab('housing')" class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">🏠 Housing & Fixed Costs</button>
+        <button id="tabHealthBtn" onclick="switchTab('health')" class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">🥗 Health Tracker</button>
+        <button id="tabStudyBtn" onclick="switchTab('study')" class="pb-3 px-2 font-semibold text-sm sm:text-base text-slate-500 transition-colors whitespace-nowrap">📚 Study Tracker</button>
+    </div>
 
-            // Mobile buttons
-            const mobileHousingBtn = document.getElementById('mobileTabHousing');
-            const mobileDailyBtn = document.getElementById('mobileTabDaily');
-            const mobileHealthBtn = document.getElementById('mobileTabHealth');
-            const mobileStudyBtn = document.getElementById('mobileTabStudy');
+    <!-- ===== DAILY EXPENSES ===== -->
+    <section id="dailySection" class="fade-in">
+        <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-700">📅 Daily Expense Tracker</h2>
+                <p class="text-slate-500 text-xs sm:text-sm">Add expenses for each day and track totals.</p>
+            </div>
+            <div class="sm:text-right">
+                <p class="text-slate-500 text-xs sm:text-sm">Total Daily Expenses (All Days)</p>
+                <p id="grandDailyTotal" class="text-xl sm:text-2xl font-extrabold text-indigo-600">₹0.00</p>
+            </div>
+        </div>
+        <div id="daysContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"></div>
+        <div class="mt-6 sm:mt-8 flex justify-center">
+            <button onclick="addNextDay()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3 px-6 sm:px-8 rounded-full shadow-lg text-base sm:text-lg transition-transform hover:scale-105">
+                <span class="text-xl sm:text-2xl leading-none">+</span> Add Next Day
+            </button>
+        </div>
+    </section>
 
-            // Hide all sections
-            dailySection.classList.add('hidden');
-            housingSection.classList.add('hidden');
-            healthSection.classList.add('hidden');
-            studySection.classList.add('hidden');
-            
-            // Remove active state desktop
-            dailyBtn.classList.remove('tab-active');
-            housingBtn.classList.remove('tab-active');
-            healthBtn.classList.remove('tab-active');
-            studyBtn.classList.remove('tab-active');
-
-            // Remove active state mobile (set to gray)
-            [mobileDailyBtn, mobileHousingBtn, mobileHealthBtn, mobileStudyBtn].forEach(btn => {
-                btn.classList.remove('text-indigo-600', 'font-bold');
-                btn.classList.add('text-slate-400');
-            });
-
-            if (tab === 'housing') {
-                housingSection.classList.remove('hidden');
-                housingBtn.classList.add('tab-active');
-                mobileHousingBtn.classList.remove('text-slate-400');
-                mobileHousingBtn.classList.add('text-indigo-600', 'font-bold');
-            } else if (tab === 'health') {
-                healthSection.classList.remove('hidden');
-                healthBtn.classList.add('tab-active');
-                mobileHealthBtn.classList.remove('text-slate-400');
-                mobileHealthBtn.classList.add('text-indigo-600', 'font-bold');
-                updateHealthQuote();
-            } else if (tab === 'study') {
-                studySection.classList.remove('hidden');
-                studyBtn.classList.add('tab-active');
-                mobileStudyBtn.classList.remove('text-slate-400');
-                mobileStudyBtn.classList.add('text-indigo-600', 'font-bold');
-                updateStudyQuote();
-            } else {
-                dailySection.classList.remove('hidden');
-                dailyBtn.classList.add('tab-active');
-                mobileDailyBtn.classList.remove('text-slate-400');
-                mobileDailyBtn.classList.add('text-indigo-600', 'font-bold');
-            }
-        }
-
-        // ---------------- DELETE DAY MODAL ----------------
-        function openDeleteModal(dayId, dayNumber) {
-            pendingDeleteDayId = dayId;
-            document.getElementById('deleteDayLabel').textContent = `Day ${dayNumber}`;
-            document.getElementById('deleteDayModal').classList.remove('hidden');
-        }
-
-        function closeDeleteModal() {
-            pendingDeleteDayId = null;
-            document.getElementById('deleteDayModal').classList.add('hidden');
-        }
-
-        async function confirmDeleteDay() {
-            if (!pendingDeleteDayId) return;
-            const res = await fetch(`/api/days/${pendingDeleteDayId}`, { method: 'DELETE' });
-            if (res.ok) {
-                const days = await res.json();
-                const container = document.getElementById('daysContainer');
-                container.innerHTML = '';
-                days.forEach(day => renderDayCard(day));
-                updateGrandTotal();
-            }
-            closeDeleteModal();
-        }
-
-        document.getElementById('deleteDayModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDeleteModal();
-        });
-
-        // ---------------- DELETE HEALTH LOG MODAL ----------------
-        function openDeleteHealthModal(logId, dateLabel) {
-            pendingDeleteHealthId = logId;
-            document.getElementById('deleteHealthLabel').textContent = dateLabel;
-            document.getElementById('deleteHealthModal').classList.remove('hidden');
-        }
-
-        function closeDeleteHealthModal() {
-            pendingDeleteHealthId = null;
-            document.getElementById('deleteHealthModal').classList.add('hidden');
-        }
-
-        async function confirmDeleteHealthLog() {
-            if (!pendingDeleteHealthId) return;
-            const res = await fetch(`/api/health/${pendingDeleteHealthId}`, { method: 'DELETE' });
-            if (res.ok) {
-                const logs = await res.json();
-                renderHealthLogs(logs);
-                loadHealthSummary();
-            }
-            closeDeleteHealthModal();
-        }
-
-        document.getElementById('deleteHealthModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDeleteHealthModal();
-        });
-
-        // ---------------- HOUSING ----------------
-        async function loadHousing() {
-            const res = await fetch('/api/housing');
-            const data = await res.json();
-            document.getElementById('monthlyRent').value = data.monthly_rent || '';
-            document.getElementById('securityAdvance').value = data.security_advance || '';
-            renderHousing(data);
-        }
-
-        function renderHousing(data) {
-            const rent = Number(data.monthly_rent || 0);
-            const advance = Number(data.security_advance || 0);
-            const payments = data.payments || [];
-            const totalRentPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-            const totalPaid = advance + totalRentPaid;
-
-            document.getElementById('summaryRent').textContent = fmt(rent);
-            document.getElementById('summaryAdvance').textContent = fmt(advance);
-            document.getElementById('summaryMonthsPaid').textContent = payments.length;
-            document.getElementById('summaryTotal').textContent = fmt(totalPaid);
-
-            renderRentPayments(payments);
-        }
-
-        function renderRentPayments(payments) {
-            const list = document.getElementById('rentPaymentsList');
-            if (!payments.length) {
-                list.innerHTML = `<p class="text-sm text-slate-400 text-center">No rent payments recorded yet.</p>`;
-                return;
-            }
-            list.innerHTML = payments.map(p => `
-                <div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm" id="payment-${p.id}">
-                    <div class="min-w-0 flex-1">
-                        <span class="font-semibold text-slate-700">${formatMonth(p.month)}</span>
-                        <span class="text-slate-400 text-xs ml-1 block sm:inline">paid on ${formatDate(p.paid_on)}</span>
-                    </div>
-                    <div class="flex items-center gap-2 ml-2 shrink-0">
-                        <span class="font-semibold text-slate-600">${fmt(p.amount)}</span>
-                        <button onclick="deleteRentPayment(${p.id})" class="text-red-400 hover:text-red-600 font-bold text-sm p-1">✕</button>
-                    </div>
+    <!-- ===== HOUSING ===== -->
+    <section id="housingSection" class="hidden fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
+                <h2 class="text-base sm:text-lg font-bold mb-4 text-slate-700">🏠 Housing Details</h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Monthly Rent Amount (₹)</label>
+                    <input type="number" id="monthlyRent" min="0" step="0.01" placeholder="e.g. 18000" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                 </div>
-            `).join('');
-        }
-
-        function formatMonth(monthStr) {
-            const [year, month] = monthStr.split('-');
-            const date = new Date(Number(year), Number(month) - 1, 1);
-            return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-        }
-
-        function formatDate(dateStr) {
-            const date = new Date(dateStr + 'T00:00:00');
-            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        }
-
-        async function saveHousing() {
-            const monthly_rent = document.getElementById('monthlyRent').value || 0;
-            const security_advance = document.getElementById('securityAdvance').value || 0;
-            const res = await fetch('/api/housing', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ monthly_rent, security_advance })
-            });
-            const data = await res.json();
-            renderHousing(data);
-            const msg = document.getElementById('housingSaveMsg');
-            msg.classList.remove('hidden');
-            setTimeout(() => msg.classList.add('hidden'), 2000);
-        }
-
-        async function addRentPayment() {
-            const month = document.getElementById('rentMonth').value;
-            const paid_on = document.getElementById('rentPaidOn').value;
-            const msgEl = document.getElementById('rentPaymentMsg');
-
-            if (!month || !paid_on) {
-                msgEl.textContent = 'Please select both the month and the date paid.';
-                msgEl.classList.remove('hidden');
-                return;
-            }
-
-            const res = await fetch('/api/housing/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ month, paid_on })
-            });
-            const data = await res.json();
-
-            if (!res.ok) {
-                msgEl.textContent = data.error || 'Could not save payment.';
-                msgEl.classList.remove('hidden');
-                return;
-            }
-
-            msgEl.classList.add('hidden');
-            renderHousing(data);
-            document.getElementById('rentMonth').value = '';
-            document.getElementById('rentPaidOn').value = '';
-        }
-
-        async function deleteRentPayment(paymentId) {
-            const res = await fetch(`/api/housing/payments/${paymentId}`, { method: 'DELETE' });
-            const data = await res.json();
-            renderHousing(data);
-        }
-
-        // ---------------- DAILY EXPENSES ----------------
-        async function loadDays() {
-            const res = await fetch('/api/days');
-            const days = await res.json();
-            const container = document.getElementById('daysContainer');
-            container.innerHTML = '';
-            days.forEach(day => renderDayCard(day));
-            updateGrandTotal();
-        }
-
-        function renderDayCard(day) {
-            const container = document.getElementById('daysContainer');
-            const card = document.createElement('div');
-            card.className = 'bg-white rounded-2xl shadow-md p-4 sm:p-5 fade-in';
-            card.id = `day-card-${day.id}`;
-            card.innerHTML = dayCardInnerHtml(day);
-            container.appendChild(card);
-        }
-
-        function dayCardInnerHtml(day) {
-            const completed = !!day.completed;
-
-            const badge = completed
-                ? `<span class="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">Completed</span>`
-                : `<span class="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-1 rounded-full">In Progress</span>`;
-
-            const formHtml = completed ? '' : `
-                <div class="add-item-form flex gap-2 mt-3">
-                    <input type="text" placeholder="Item name"
-                        id="item-name-${day.id}"
-                        class="flex-1 min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                    <input type="number" placeholder="₹ Amt" min="0" step="0.01"
-                        id="item-amount-${day.id}"
-                        class="w-24 sm:w-28 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
-                    <button onclick="addItem(${day.id})"
-                        class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0">
-                        Add
-                    </button>
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Security Advance (₹) <span class="text-xs text-slate-400">— one-time</span></label>
+                    <input type="number" id="securityAdvance" min="0" step="0.01" placeholder="e.g. 100000" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                 </div>
-            `;
-
-            const actionBtn = completed
-                ? `<button onclick="toggleComplete(${day.id})"
-                        class="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 px-3 py-1.5 rounded-lg transition-colors">
-                        ✏️ Edit
-                   </button>`
-                : `<button onclick="toggleComplete(${day.id})"
-                        class="text-xs sm:text-sm font-semibold text-emerald-600 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors">
-                        ✅ Complete
-                   </button>`;
-
-            return `
-                <div class="flex justify-between items-center mb-1">
-                    <h3 class="text-base sm:text-lg font-bold text-slate-700">Day ${day.day_number}</h3>
-                    <div class="flex items-center gap-2">
-                        ${badge}
-                        <button onclick="openDeleteModal(${day.id}, ${day.day_number})"
-                            title="Delete this day"
-                            class="text-red-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
-                            >🗑️</button>
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-xs sm:text-sm text-slate-500">Day Total</span>
-                    <span class="text-sm font-semibold text-emerald-600" id="day-total-${day.id}">${fmt(day.total)}</span>
-                </div>
-
-                <div class="space-y-2 max-h-44 overflow-y-auto scrollbar-thin mb-3" id="day-items-${day.id}">
-                    ${day.items.map(item => itemRowHtml(day.id, item, completed)).join('')}
-                </div>
-
-                ${formHtml}
-
-                <div class="mt-3 flex justify-end">
-                    ${actionBtn}
-                </div>
-            `;
-        }
-
-        function itemRowHtml(dayId, item, completed) {
-            const deleteBtn = completed ? ''
-                : `<button onclick="deleteItem(${item.id}, ${dayId})" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">✕</button>`;
-            const editBtn = completed
-                ? `<button onclick="editItem(${item.id}, ${dayId})" class="text-indigo-400 hover:text-indigo-600 font-bold text-xs p-1">✏️</button>`
-                : '';
-
-            return `
-                <div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm" id="item-${item.id}">
-                    <span class="text-slate-700 truncate flex-1 mr-2">${escapeHtml(item.item_name)}</span>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <span class="font-semibold text-slate-600">${fmt(item.amount)}</span>
-                        ${editBtn}
-                        ${deleteBtn}
-                    </div>
-                </div>
-            `;
-        }
-
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-
-        async function addNextDay() {
-            const res = await fetch('/api/days', { method: 'POST' });
-            const day = await res.json();
-            renderDayCard(day);
-            updateGrandTotal();
-            const card = document.getElementById(`day-card-${day.id}`);
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function refreshDayCard(day) {
-            const card = document.getElementById(`day-card-${day.id}`);
-            if (card) card.innerHTML = dayCardInnerHtml(day);
-        }
-
-        async function addItem(dayId) {
-            const nameInput = document.getElementById(`item-name-${dayId}`);
-            const amountInput = document.getElementById(`item-amount-${dayId}`);
-            const item_name = nameInput.value.trim();
-            const amount = amountInput.value;
-
-            if (!item_name || !amount) {
-                alert('Please enter both an item name and an amount.');
-                return;
-            }
-
-            const res = await fetch(`/api/days/${dayId}/items`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ item_name, amount })
-            });
-            const day = await res.json();
-            refreshDayCard(day);
-            updateGrandTotal();
-            const newNameInput = document.getElementById(`item-name-${dayId}`);
-            if (newNameInput) newNameInput.focus();
-        }
-
-        async function deleteItem(itemId, dayId) {
-            const res = await fetch(`/api/items/${itemId}`, { method: 'DELETE' });
-            const day = await res.json();
-            refreshDayCard(day);
-            updateGrandTotal();
-        }
-
-        async function editItem(itemId, dayId) {
-            const row = document.getElementById(`item-${itemId}`);
-            const currentName = row.querySelector('span').textContent;
-            const currentAmountText = row.querySelectorAll('span')[1].textContent.replace(/[₹,]/g, '').trim();
-
-            const newName = prompt('Edit item name:', currentName);
-            if (newName === null) return;
-            const newAmount = prompt('Edit amount (₹):', currentAmountText);
-            if (newAmount === null) return;
-
-            if (!newName.trim() || !newAmount || isNaN(Number(newAmount))) {
-                alert('Please enter a valid item name and amount.');
-                return;
-            }
-
-            const res = await fetch(`/api/items/${itemId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ item_name: newName.trim(), amount: newAmount })
-            });
-            const day = await res.json();
-            refreshDayCard(day);
-            updateGrandTotal();
-        }
-
-        async function toggleComplete(dayId) {
-            const res = await fetch(`/api/days/${dayId}/toggle-complete`, { method: 'POST' });
-            const day = await res.json();
-            refreshDayCard(day);
-        }
-
-        async function updateGrandTotal() {
-            const res = await fetch('/api/summary');
-            const data = await res.json();
-            document.getElementById('grandDailyTotal').textContent = fmt(data.total_daily_expenses);
-        }
-
-        // ---------------- HEALTH TRACKER ----------------
-        const habitState = { sugarCut: null, outsideFood: null, fruits: null };
-
-        function setHabitChoice(habitKey, value) {
-            habitState[habitKey] = value;
-            renderHabitButtons(habitKey);
-            updateHealthQuote(); // Update quote immediately when user makes a choice
-        }
-
-        function renderHabitButtons(habitKey) {
-            const idMap = {
-                sugarCut: ['sugarCutYes', 'sugarCutNo'],
-                outsideFood: ['outsideFoodYes', 'outsideFoodNo'],
-                fruits: ['fruitsYes', 'fruitsNo']
-            };
-            const [yesId, noId] = idMap[habitKey];
-            const yesBtn = document.getElementById(yesId);
-            const noBtn = document.getElementById(noId);
-            yesBtn.classList.remove('selected-yes', 'selected-no');
-            noBtn.classList.remove('selected-yes', 'selected-no');
-
-            if (habitState[habitKey] === true) {
-                yesBtn.classList.add('selected-yes');
-            } else if (habitState[habitKey] === false) {
-                noBtn.classList.add('selected-no');
-            }
-        }
-
-        function resetHabitButtons() {
-            habitState.sugarCut = null;
-            habitState.outsideFood = null;
-            habitState.fruits = null;
-            ['sugarCut', 'outsideFood', 'fruits'].forEach(renderHabitButtons);
-        }
-
-        function todayLocalISO() {
-            const d = new Date();
-            const offsetMs = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - offsetMs).toISOString().slice(0, 10);
-        }
-
-        async function loadHealthLogs() {
-            const res = await fetch('/api/health');
-            const logs = await res.json();
-            renderHealthLogs(logs);
-        }
-
-        function renderHealthLogs(logs) {
-            const list = document.getElementById('healthLogsList');
-            if (!logs.length) {
-                list.innerHTML = `<p class="text-sm text-slate-400 text-center">No health logs yet. Start tracking above!</p>`;
-                return;
-            }
-            list.innerHTML = logs.map(l => healthLogRowHtml(l)).join('');
-        }
-
-        function healthLogRowHtml(l) {
-            const dateLabel = formatLogDate(l.log_date);
-            const chip = (on, label) => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full ${on ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-400'}">${label}: ${on ? 'Yes' : 'No'}</span>`;
-
-            return `
-                <div class="bg-slate-50 rounded-lg px-3 py-2.5 text-sm" id="health-log-${l.id}">
-                    <div class="flex justify-between items-start gap-2">
-                        <div class="min-w-0 flex-1">
-                            <p class="font-semibold text-slate-700">${dateLabel}</p>
-                            <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                ${chip(l.sugar_cut, '🍬 Sugar Cut')}
-                                ${chip(l.no_outside_food, '🍔 No Outside Food')}
-                                ${chip(l.fruits_eaten, '🍎 Fruits')}
-                            </div>
-                            ${l.notes ? `<p class="text-xs text-slate-400 mt-1.5">${escapeHtml(l.notes)}</p>` : ''}
+                <button onclick="saveHousing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm sm:text-base">Save Housing Details</button>
+                <p id="housingSaveMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Saved successfully!</p>
+                <hr class="my-5 border-slate-200">
+                <div>
+                    <p class="text-sm font-semibold text-slate-700 mb-3">Rent Payment History</p>
+                    <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                        <div class="flex-1">
+                            <label class="block text-xs text-slate-500 mb-1">Month</label>
+                            <input type="month" id="rentMonth" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                         </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                            <button onclick="editHealthLog('${l.log_date}')" class="text-indigo-400 hover:text-indigo-600 font-bold text-xs p-1">✏️</button>
-                            <button onclick="openDeleteHealthModal(${l.id}, '${dateLabel}')" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">✕</button>
+                        <div class="flex-1">
+                            <label class="block text-xs text-slate-500 mb-1">Date Paid</label>
+                            <input type="date" id="rentPaidOn" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                        </div>
+                    </div>
+                    <button onclick="addRentPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm sm:text-base">➕ Mark This Month's Rent as Paid</button>
+                    <p id="rentPaymentMsg" class="text-red-500 text-sm mt-2 text-center hidden"></p>
+                    <div id="rentPaymentsList" class="mt-4 space-y-2 max-h-48 overflow-y-auto scrollbar-thin"></div>
+                </div>
+            </div>
+            <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-md p-4 sm:p-6 text-white flex flex-col justify-center">
+                <h2 class="text-base sm:text-lg font-bold mb-4">📊 Accommodation Summary</h2>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between"><span class="opacity-80">Monthly Rent</span><span id="summaryRent" class="font-semibold">₹0.00</span></div>
+                    <div class="flex justify-between"><span class="opacity-80">Security Advance (one-time)</span><span id="summaryAdvance" class="font-semibold">₹0.00</span></div>
+                    <div class="flex justify-between"><span class="opacity-80">Months of Rent Paid</span><span id="summaryMonthsPaid" class="font-semibold">0</span></div>
+                    <hr class="border-white/30 my-2">
+                    <div class="flex justify-between text-base sm:text-lg"><span class="font-bold">Total Paid Till Date</span><span id="summaryTotal" class="font-extrabold">₹0.00</span></div>
+                </div>
+                <p class="text-xs opacity-70 mt-4">* Total = Security Advance (one-time) + (Monthly Rent × Months Paid).</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== HEALTH TRACKER ===== -->
+    <section id="healthSection" class="hidden fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
+                <h2 class="text-base sm:text-lg font-bold mb-1 text-slate-700">🥗 Log Today's Habits</h2>
+                <p class="text-slate-500 text-xs sm:text-sm mb-4">Pick a date and mark the habits you kept.</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
+                    <input type="date" id="healthDate" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                </div>
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <p class="font-medium text-sm text-slate-700 mb-1.5">🍬 Cut Sugar?</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="sugarCutYes" onclick="setHabitChoice('sugarCut', true)" class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
+                            <button type="button" id="sugarCutNo" onclick="setHabitChoice('sugarCut', false)" class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm text-slate-700 mb-1.5">🍔 Avoided Outside Food?</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="outsideFoodYes" onclick="setHabitChoice('outsideFood', true)" class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
+                            <button type="button" id="outsideFoodNo" onclick="setHabitChoice('outsideFood', false)" class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm text-slate-700 mb-1.5">🍎 Ate Fruits?</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="fruitsYes" onclick="setHabitChoice('fruits', true)" class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">Yes</button>
+                            <button type="button" id="fruitsNo" onclick="setHabitChoice('fruits', false)" class="habit-choice-btn border rounded-lg py-2 text-sm font-semibold">No</button>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-
-        function formatLogDate(dateStr) {
-            const date = new Date(dateStr + 'T00:00:00');
-            return date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-        }
-
-        function editHealthLog(logDate) {
-            document.getElementById('healthDate').value = logDate;
-            fetch('/api/health').then(r => r.json()).then(logs => {
-                const log = logs.find(l => l.log_date === logDate);
-                if (log) {
-                    habitState.sugarCut = log.sugar_cut;
-                    habitState.outsideFood = log.no_outside_food;
-                    habitState.fruits = log.fruits_eaten;
-                    ['sugarCut', 'outsideFood', 'fruits'].forEach(renderHabitButtons);
-                    document.getElementById('healthNotes').value = log.notes || '';
-                    updateHealthQuote();
-                }
-            });
-            document.getElementById('healthDate').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        async function saveHealthLog() {
-            const errEl = document.getElementById('healthErrorMsg');
-            const msgEl = document.getElementById('healthSaveMsg');
-            errEl.classList.add('hidden');
-
-            const log_date = document.getElementById('healthDate').value;
-            if (!log_date) {
-                errEl.textContent = 'Please select a date.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-
-            if (habitState.sugarCut === null || habitState.outsideFood === null || habitState.fruits === null) {
-                errEl.textContent = 'Please choose Yes or No for all three habits.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-
-            const sugar_cut = habitState.sugarCut;
-            const no_outside_food = habitState.outsideFood;
-            const fruits_eaten = habitState.fruits;
-            const notes = document.getElementById('healthNotes').value.trim();
-
-            const res = await fetch('/api/health', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ log_date, sugar_cut, no_outside_food, fruits_eaten, notes })
-            });
-            const data = await res.json();
-
-            if (!res.ok) {
-                errEl.textContent = data.error || 'Could not save log.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-
-            renderHealthLogs(data);
-            loadHealthSummary();
-
-            msgEl.classList.remove('hidden');
-            setTimeout(() => msgEl.classList.add('hidden'), 2000);
-
-            resetHabitButtons();
-            document.getElementById('healthNotes').value = '';
-            updateHealthQuote();
-        }
-
-        async function loadHealthSummary() {
-            const res = await fetch('/api/health/summary');
-            const data = await res.json();
-
-            const total = data.total_days_tracked || 0;
-            document.getElementById('statTotalDays').textContent = total;
-
-            document.getElementById('statSugarCut').textContent = `${data.sugar_cut_days} / ${total} days (${data.sugar_cut_pct}%)`;
-            document.getElementById('barSugarCut').style.width = `${data.sugar_cut_pct}%`;
-
-            document.getElementById('statOutsideFood').textContent = `${data.no_outside_food_days} / ${total} days (${data.no_outside_food_pct}%)`;
-            document.getElementById('barOutsideFood').style.width = `${data.no_outside_food_pct}%`;
-
-            document.getElementById('statFruits').textContent = `${data.fruits_eaten_days} / ${total} days (${data.fruits_eaten_pct}%)`;
-            document.getElementById('barFruits').style.width = `${data.fruits_eaten_pct}%`;
-            
-            updateHealthQuote();
-        }
-
-        // Dynamic Health Quote Logic
-        function updateHealthQuote() {
-            const box = document.getElementById('healthQuoteBox');
-            const emojiEl = document.getElementById('healthQuoteEmoji');
-            const textEl = document.getElementById('healthQuoteText');
-            
-            let emoji = "⏳";
-            let text = "Log today's habits to see your motivation!";
-            let bgColor = "bg-white/20";
-
-            if (habitState.sugarCut === false) {
-                emoji = "🍬";
-                text = "Oops! Sugar sneaks in fast. Don't worry, tomorrow is a fresh start. Try to cut it next time!";
-                bgColor = "bg-red-500/30";
-            } else if (habitState.sugarCut === true && habitState.outsideFood === true && habitState.fruits === true) {
-                emoji = "🌟";
-                text = "Amazing! You're taking great care of your body. Keep up the fantastic work!";
-                bgColor = "bg-emerald-500/30";
-            } else if (habitState.sugarCut === true) {
-                emoji = "🥗";
-                text = "Great job cutting sugar! Your future self will thank you for this.";
-                bgColor = "bg-emerald-500/30";
-            } else if (habitState.fruits === true) {
-                emoji = "🍎";
-                text = "Fruits are brain fuel! Keep eating healthy and stay energetic.";
-                bgColor = "bg-emerald-500/30";
-            }
-
-            emojiEl.textContent = emoji;
-            textEl.textContent = text;
-            // Reset classes and apply new color
-            box.className = `mt-4 ${bgColor} backdrop-blur-sm rounded-xl p-4 text-center transition-all`;
-        }
-
-        // ---------------- STUDY TRACKER ----------------
-        const TOPIC_ICONS = {
-            'HTML': '🟧', 'CSS': '🟦', 'JS': '🟨', 'ReactJS': '⚛️',
-            'Java': '☕', 'SpringBoot': '🍃', 'Hibernate': '🐻', 'SQL': '🗄️'
-        };
-        let studyTopics = [];
-
-        async function loadStudyTopics() {
-            const res = await fetch('/api/study/topics');
-            studyTopics = await res.json();
-            renderStudyTopicCards();
-            populateStudyFilterDropdown();
-        }
-
-        function renderStudyTopicCards(perTopicCounts) {
-            const grid = document.getElementById('studyTopicsGrid');
-            grid.innerHTML = studyTopics.map(topic => {
-                const count = perTopicCounts && perTopicCounts[topic] ? perTopicCounts[topic].sessions : 0;
-                const hours = perTopicCounts && perTopicCounts[topic] ? perTopicCounts[topic].hours : 0;
-                return `
-                    <button onclick="openStudyModal('${topic}')"
-                        class="bg-white rounded-2xl shadow-md p-4 text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                        <div class="text-3xl mb-1">${TOPIC_ICONS[topic] || '📘'}</div>
-                        <div class="font-bold text-slate-700 text-sm">${topic}</div>
-                        <div class="text-xs text-slate-400 mt-1">${count} session${count === 1 ? '' : 's'}</div>
-                        <div class="text-xs text-indigo-500 font-semibold">${hours.toFixed(1)} hrs</div>
-                    </button>
-                `;
-            }).join('');
-        }
-
-        function populateStudyFilterDropdown() {
-            const select = document.getElementById('studyFilterTopic');
-            const current = select.value;
-            select.innerHTML = '<option value="">All Topics</option>' +
-                studyTopics.map(t => `<option value="${t}">${t}</option>`).join('');
-            select.value = current;
-        }
-
-        function openStudyModal(topic, sessionToEdit) {
-            document.getElementById('studyModalTopic').textContent = topic;
-            document.getElementById('studySessionTopic').value = topic;
-            document.getElementById('studyFormError').classList.add('hidden');
-
-            if (sessionToEdit) {
-                document.getElementById('studyModalTitle').textContent = '✏️ Edit Study Session';
-                document.getElementById('studySessionId').value = sessionToEdit.id;
-                document.getElementById('studyDate').value = sessionToEdit.log_date;
-                document.getElementById('studySubtopic').value = sessionToEdit.subtopic;
-                document.getElementById('studyHours').value = sessionToEdit.hours;
-                document.getElementById('studyNotes').value = sessionToEdit.notes || '';
-            } else {
-                document.getElementById('studyModalTitle').textContent = '📚 Log Study Session';
-                document.getElementById('studySessionId').value = '';
-                document.getElementById('studyDate').value = todayLocalISO();
-                document.getElementById('studySubtopic').value = '';
-                document.getElementById('studyHours').value = '';
-                document.getElementById('studyNotes').value = '';
-            }
-
-            document.getElementById('studyFormModal').classList.remove('hidden');
-        }
-
-        function closeStudyModal() {
-            document.getElementById('studyFormModal').classList.add('hidden');
-        }
-
-        document.getElementById('studyFormModal').addEventListener('click', function(e) {
-            if (e.target === this) closeStudyModal();
-        });
-
-        async function submitStudySession() {
-            const errEl = document.getElementById('studyFormError');
-            errEl.classList.add('hidden');
-
-            const id = document.getElementById('studySessionId').value;
-            const topic = document.getElementById('studySessionTopic').value;
-            const log_date = document.getElementById('studyDate').value;
-            const subtopic = document.getElementById('studySubtopic').value.trim();
-            const hours = document.getElementById('studyHours').value;
-            const notes = document.getElementById('studyNotes').value.trim();
-
-            if (!log_date) {
-                errEl.textContent = 'Please select a date.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-            if (!subtopic) {
-                errEl.textContent = 'Please describe what you studied.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-
-            const payload = { topic, log_date, subtopic, hours: hours || 0, notes };
-            const url = id ? `/api/study/${id}` : '/api/study';
-            const method = id ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-
-            if (!res.ok) {
-                errEl.textContent = data.error || 'Could not save session.';
-                errEl.classList.remove('hidden');
-                return;
-            }
-
-            closeStudyModal();
-            loadStudySessions();
-            loadStudySummary();
-        }
-
-        async function loadStudySessions() {
-            const topic = document.getElementById('studyFilterTopic').value;
-            const url = topic ? `/api/study?topic=${encodeURIComponent(topic)}` : '/api/study';
-            const res = await fetch(url);
-            const sessions = await res.json();
-            renderStudySessions(sessions);
-        }
-
-        function renderStudySessions(sessions) {
-            const list = document.getElementById('studySessionsList');
-            if (!sessions.length) {
-                list.innerHTML = `<p class="text-sm text-slate-400 text-center">No study sessions logged yet. Tap a topic above to start!</p>`;
-                return;
-            }
-            list.innerHTML = sessions.map(s => studySessionRowHtml(s)).join('');
-        }
-
-        function studySessionRowHtml(s) {
-            const dateLabel = formatLogDate(s.log_date);
-            return `
-                <div class="flex justify-between items-start gap-2 bg-slate-50 rounded-lg px-3 py-2.5 text-sm" id="study-session-${s.id}">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">${TOPIC_ICONS[s.topic] || '📘'} ${s.topic}</span>
-                            <span class="text-xs text-slate-400">${dateLabel}</span>
-                        </div>
-                        <p class="font-medium text-slate-700 mt-1">${escapeHtml(s.subtopic)}</p>
-                        ${s.notes ? `<p class="text-xs text-slate-400 mt-0.5">${escapeHtml(s.notes)}</p>` : ''}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Notes <span class="text-xs text-slate-400">(optional)</span></label>
+                    <input type="text" id="healthNotes" placeholder="e.g. felt great today" maxlength="300" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                </div>
+                <button onclick="saveHealthLog()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm sm:text-base">Save Log for This Date</button>
+                <p id="healthSaveMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Saved successfully!</p>
+                <p id="healthErrorMsg" class="text-red-500 text-sm mt-2 text-center hidden"></p>
+                <hr class="my-5 border-slate-200">
+                <p class="text-sm font-semibold text-slate-700 mb-3">History</p>
+                <div id="healthLogsList" class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin"></div>
+            </div>
+            <div class="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl shadow-md p-4 sm:p-6 text-white flex flex-col justify-center">
+                <h2 class="text-base sm:text-lg font-bold mb-4">📊 Habit Stats</h2>
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <div class="flex justify-between mb-1"><span class="opacity-90">🍬 Sugar Cut</span><span id="statSugarCut" class="font-semibold">0 / 0 days (0%)</span></div>
+                        <div class="w-full bg-white/20 rounded-full h-2"><div id="barSugarCut" class="bg-white h-2 rounded-full" style="width:0%"></div></div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <span class="font-semibold text-indigo-600 text-xs whitespace-nowrap">${Number(s.hours).toFixed(1)} hrs</span>
-                        <button onclick='editStudySession(${JSON.stringify(s)})' class="text-indigo-400 hover:text-indigo-600 font-bold text-xs p-1">✏️</button>
-                        <button onclick="openDeleteStudyModal(${s.id})" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">✕</button>
+                    <div>
+                        <div class="flex justify-between mb-1"><span class="opacity-90">🍔 Outside Food Avoided</span><span id="statOutsideFood" class="font-semibold">0 / 0 days (0%)</span></div>
+                        <div class="w-full bg-white/20 rounded-full h-2"><div id="barOutsideFood" class="bg-white h-2 rounded-full" style="width:0%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1"><span class="opacity-90">🍎 Fruits Eaten</span><span id="statFruits" class="font-semibold">0 / 0 days (0%)</span></div>
+                        <div class="w-full bg-white/20 rounded-full h-2"><div id="barFruits" class="bg-white h-2 rounded-full" style="width:0%"></div></div>
                     </div>
                 </div>
-            `;
-        }
+                <hr class="border-white/30 my-4">
+                <div class="flex justify-between text-base"><span class="font-bold">Total Days Tracked</span><span id="statTotalDays" class="font-extrabold">0</span></div>
+                <div id="healthQuoteBox" class="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <p id="healthQuoteEmoji" class="text-3xl mb-1">⏳</p>
+                    <p id="healthQuoteText" class="text-sm font-medium">Log today's habits to see your motivation!</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        function editStudySession(session) {
-            openStudyModal(session.topic, session);
-        }
+    <!-- ===== STUDY TRACKER – MAIN LIST ===== -->
+    <section id="studySection" class="hidden fade-in">
+        <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-700">📚 JSpider Study Tracker</h2>
+                <p class="text-slate-500 text-xs sm:text-sm">Tap a topic card to open it — log sessions, upload notes, and save code snippets.</p>
+            </div>
+            <div class="sm:text-right">
+                <p class="text-slate-500 text-xs sm:text-sm">Total Hours Studied</p>
+                <p id="studyTotalHours" class="text-xl sm:text-2xl font-extrabold text-indigo-600">0.0 hrs</p>
+            </div>
+        </div>
+        <div id="studyTopicsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"></div>
+        <div id="studyQuoteBox" class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center mb-6 sm:mb-8">
+            <p id="studyQuoteEmoji" class="text-3xl mb-1">🚀</p>
+            <p id="studyQuoteText" class="text-indigo-700 font-medium text-sm">Start logging to get encouraged!</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <p class="text-sm font-semibold text-slate-700">Study History</p>
+                <select id="studyFilterTopic" onchange="loadStudySessions()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    <option value="">All Topics</option>
+                </select>
+            </div>
+            <div id="studySessionsList" class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin"></div>
+        </div>
+    </section>
 
-        function openDeleteStudyModal(sessionId) {
-            pendingDeleteStudyId = sessionId;
-            document.getElementById('deleteStudyModal').classList.remove('hidden');
-        }
+    <!-- ===== TOPIC DETAIL PAGE ===== -->
+    <section id="topicDetailSection" class="hidden fade-in">
+        <!-- Back + header -->
+        <div class="flex items-center gap-3 mb-5">
+            <button onclick="closeTopicPage()" class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-semibold text-sm bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Back
+            </button>
+            <div>
+                <h2 id="topicDetailTitle" class="text-xl font-extrabold text-slate-700">HTML</h2>
+                <p class="text-xs text-slate-400" id="topicDetailSub">Notes · Code Snippets · Sessions</p>
+            </div>
+        </div>
 
-        function closeDeleteStudyModal() {
-            pendingDeleteStudyId = null;
-            document.getElementById('deleteStudyModal').classList.add('hidden');
-        }
+        <!-- Tabs inside topic page -->
+        <div class="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6 w-full sm:w-auto sm:inline-flex">
+            <button id="tpTabSessions" onclick="switchTopicTab('sessions')" class="flex-1 sm:flex-none text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg bg-white shadow text-indigo-700 transition-all">📋 Sessions</button>
+            <button id="tpTabNotes" onclick="switchTopicTab('notes')" class="flex-1 sm:flex-none text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg text-slate-500 hover:text-slate-700 transition-all">📁 Notes</button>
+            <button id="tpTabSnippets" onclick="switchTopicTab('snippets')" class="flex-1 sm:flex-none text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg text-slate-500 hover:text-slate-700 transition-all">💻 Snippets</button>
+        </div>
 
-        async function confirmDeleteStudySession() {
-            if (!pendingDeleteStudyId) return;
-            const res = await fetch(`/api/study/${pendingDeleteStudyId}`, { method: 'DELETE' });
-            if (res.ok) {
-                loadStudySessions();
-                loadStudySummary();
-            }
-            closeDeleteStudyModal();
-        }
+        <!-- Sessions tab -->
+        <div id="tpSessions" class="fade-in">
+            <div class="flex justify-between items-center mb-3">
+                <p class="text-sm font-semibold text-slate-700">Logged Sessions</p>
+                <button onclick="openStudyModal(currentTopicPage)" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg">+ Add Session</button>
+            </div>
+            <div id="tpSessionsList" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin"></div>
+        </div>
 
-        document.getElementById('deleteStudyModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDeleteStudyModal();
-        });
+        <!-- Notes tab -->
+        <div id="tpNotes" class="hidden fade-in">
+            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-4">
+                <h3 class="text-sm font-bold text-slate-700 mb-3">📤 Upload a Note</h3>
+                <p class="text-xs text-slate-400 mb-3">Accepted: PDF, TXT, MD, DOCX, PNG, JPG, PPTX, XLSX, CSV, HTML, PY, Java, JS, ZIP</p>
+                <div id="fileDropZone" class="file-drop-zone rounded-xl p-6 text-center cursor-pointer" onclick="document.getElementById('noteFileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                    <div class="text-4xl mb-2">📂</div>
+                    <p class="text-sm text-slate-500 font-medium">Click to browse or drag & drop a file here</p>
+                    <p id="selectedFileName" class="text-xs text-indigo-600 mt-1 font-semibold"></p>
+                </div>
+                <input type="file" id="noteFileInput" class="hidden" onchange="handleFileSelect(event)" accept=".pdf,.txt,.md,.docx,.doc,.png,.jpg,.jpeg,.pptx,.xlsx,.csv,.html,.py,.java,.js,.zip">
+                <button onclick="uploadNote()" class="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">⬆️ Upload File</button>
+                <p id="noteUploadMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Uploaded!</p>
+                <p id="noteUploadError" class="text-red-500 text-sm mt-2 text-center hidden"></p>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-slate-700 mb-3">Uploaded Files</p>
+                <div id="tpNotesList" class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin"></div>
+            </div>
+        </div>
 
-        async function loadStudySummary() {
-            const res = await fetch('/api/study/summary');
-            const data = await res.json();
-            renderStudyTopicCards(data.per_topic);
-            document.getElementById('studyTotalHours').textContent = `${Number(data.total_hours).toFixed(1)} hrs`;
-            updateStudyQuote(data.total_hours);
-        }
+        <!-- Snippets tab -->
+        <div id="tpSnippets" class="hidden fade-in">
+            <!-- Add snippet form -->
+            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-5">
+                <h3 class="text-sm font-bold text-slate-700 mb-3" id="snippetFormTitle">➕ Add Code Snippet</h3>
+                <input type="hidden" id="editingSnippetId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Topic / Tag <span class="text-slate-400">(e.g. &lt;a&gt;, useState)</span></label>
+                        <input type="text" id="snippetTag" maxlength="100" placeholder="e.g. <a>, flex, JOIN" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Explanation <span class="text-slate-400">(autocorrect enabled)</span></label>
+                        <div class="relative">
+                            <input type="text" id="snippetExplanation" maxlength="400" placeholder="e.g. used for hyperlinks" spellcheck="true" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" oninput="runAutocorrect(this)">
+                        </div>
+                        <div id="autocorrectSuggestions" class="mt-1 flex flex-wrap gap-1 hidden"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Example Code</label>
+                    <textarea id="snippetCode" rows="5" class="code-editor w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" placeholder='e.g. <a href="https://example.com">Click me</a>'></textarea>
+                </div>
+                <p id="snippetFormError" class="text-red-500 text-xs mb-2 hidden"></p>
+                <div class="flex gap-2">
+                    <button onclick="submitSnippet()" id="snippetSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm">Save Snippet</button>
+                    <button onclick="cancelSnippetEdit()" id="snippetCancelBtn" class="hidden border border-slate-300 text-slate-600 font-semibold py-2.5 px-4 rounded-lg text-sm hover:bg-slate-50">Cancel</button>
+                </div>
+            </div>
 
-        // Dynamic Study Quote Logic
-        function updateStudyQuote(totalHours = 0) {
-            const box = document.getElementById('studyQuoteBox');
-            const emojiEl = document.getElementById('studyQuoteEmoji');
-            const textEl = document.getElementById('studyQuoteText');
-            
-            let emoji = "🚀";
-            let text = "Start logging to get encouraged!";
-            let bgColor = "bg-indigo-50";
-            let borderColor = "border-indigo-100";
-            let textColor = "text-indigo-700";
+            <!-- Search + list -->
+            <div class="flex gap-2 mb-3">
+                <input type="text" id="snippetSearch" placeholder="🔍 Search snippets..." oninput="renderSnippets()" class="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+            </div>
+            <div id="tpSnippetsList" class="space-y-3"></div>
+        </div>
+    </section>
 
-            if (totalHours === 0) {
-                emoji = "🚀";
-                text = "Ready to learn? Log your first session today!";
-            } else if (totalHours < 5) {
-                emoji = "🌱";
-                text = "Great start! Every expert was once a beginner. Keep going!";
-            } else if (totalHours < 15) {
-                emoji = "🔥";
-                text = "You're building serious momentum. Keep up the great work!";
-            } else if (totalHours < 30) {
-                emoji = "💪";
-                text = "Deep work pays off! You're doing amazing, don't stop now.";
-            } else {
-                emoji = "🏆";
-                text = "Outstanding dedication! You are mastering your craft.";
-                bgColor = "bg-emerald-50";
-                borderColor = "border-emerald-200";
-                textColor = "text-emerald-700";
-            }
+</main>
 
-            emojiEl.textContent = emoji;
-            textEl.textContent = text;
-            box.className = `${bgColor} ${borderColor} border rounded-xl p-4 text-center mb-6 sm:mb-8 transition-all`;
-            textEl.className = `${textColor} font-medium text-sm`;
-        }
+<script>
+// ============================================================
+// UTILS
+// ============================================================
+const fmt = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const escHtml = str => { const d=document.createElement('div'); d.textContent=str; return d.innerHTML; };
+function todayLocalISO() { const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function formatDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function formatMonth(s){ const [y,m]=s.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString('en-IN',{month:'long',year:'numeric'}); }
+function formatLogDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}); }
+function formatFileSize(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 
-        // ---------------- INIT ----------------
-        window.addEventListener('DOMContentLoaded', () => {
-            loadHousing();
-            loadDays();
-            document.getElementById('healthDate').value = todayLocalISO();
-            loadHealthLogs();
-            loadHealthSummary();
-            loadStudyTopics().then(() => loadStudySummary());
-            loadStudySessions();
-            updateStudyQuote(0); // Initial quote
-            updateHealthQuote(); // Initial quote
-        });
-    </script>
+let pendingDeleteDayId=null, pendingDeleteHealthId=null, pendingDeleteStudyId=null, pendingDeleteNoteId=null, pendingDeleteSnippetId=null;
+let currentTopicPage = null;
+let allSnippets = [];
 
+// ============================================================
+// HAMBURGER / DRAWER
+// ============================================================
+function toggleDrawer(){
+    const d=document.getElementById('mobileDrawer');
+    const o=document.getElementById('drawerOverlay');
+    const open=d.classList.contains('open');
+    if(open){ closeDrawer(); } else { d.classList.add('open'); o.classList.add('open'); }
+}
+function closeDrawer(){
+    document.getElementById('mobileDrawer').classList.remove('open');
+    document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(tab){
+    // close topic page if open
+    if(tab==='study') closeTopicPage(false);
+
+    ['daily','housing','health','study'].forEach(t=>{
+        document.getElementById(t+'Section').classList.add('hidden');
+        const dbtn = document.getElementById('tabDailyBtn');
+        // desktop
+    });
+    document.getElementById('dailySection').classList.add('hidden');
+    document.getElementById('housingSection').classList.add('hidden');
+    document.getElementById('healthSection').classList.add('hidden');
+    document.getElementById('studySection').classList.add('hidden');
+    document.getElementById('topicDetailSection').classList.add('hidden');
+
+    // Desktop tab highlight
+    ['tabDailyBtn','tabHousingBtn','tabHealthBtn','tabStudyBtn'].forEach(id=>document.getElementById(id).classList.remove('tab-active'));
+    // Drawer highlight
+    ['drawerDaily','drawerHousing','drawerHealth','drawerStudy'].forEach(id=>{
+        const el=document.getElementById(id);
+        el.classList.remove('active-drawer','text-indigo-700');
+        el.classList.add('text-slate-700');
+    });
+
+    const titleMap={daily:'📅 Daily Expenses',housing:'🏠 Housing',health:'🥗 Health Tracker',study:'📚 Study Tracker'};
+    document.getElementById('mobilePageTitle').textContent=titleMap[tab]||'💰 Tracker';
+
+    if(tab==='housing'){
+        document.getElementById('housingSection').classList.remove('hidden');
+        document.getElementById('tabHousingBtn').classList.add('tab-active');
+        document.getElementById('drawerHousing').classList.add('active-drawer');
+    } else if(tab==='health'){
+        document.getElementById('healthSection').classList.remove('hidden');
+        document.getElementById('tabHealthBtn').classList.add('tab-active');
+        document.getElementById('drawerHealth').classList.add('active-drawer');
+        updateHealthQuote();
+    } else if(tab==='study'){
+        document.getElementById('studySection').classList.remove('hidden');
+        document.getElementById('tabStudyBtn').classList.add('tab-active');
+        document.getElementById('drawerStudy').classList.add('active-drawer');
+        updateStudyQuote();
+    } else {
+        document.getElementById('dailySection').classList.remove('hidden');
+        document.getElementById('tabDailyBtn').classList.add('tab-active');
+        document.getElementById('drawerDaily').classList.add('active-drawer');
+    }
+}
+
+// ============================================================
+// DELETE MODALS
+// ============================================================
+function openDeleteModal(id,num){ pendingDeleteDayId=id; document.getElementById('deleteDayLabel').textContent=`Day ${num}`; document.getElementById('deleteDayModal').classList.remove('hidden'); }
+function closeDeleteModal(){ pendingDeleteDayId=null; document.getElementById('deleteDayModal').classList.add('hidden'); }
+async function confirmDeleteDay(){
+    if(!pendingDeleteDayId) return;
+    const res=await fetch(`/api/days/${pendingDeleteDayId}`,{method:'DELETE'});
+    if(res.ok){ const days=await res.json(); document.getElementById('daysContainer').innerHTML=''; days.forEach(d=>renderDayCard(d)); updateGrandTotal(); }
+    closeDeleteModal();
+}
+document.getElementById('deleteDayModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteModal(); });
+
+function openDeleteHealthModal(id,label){ pendingDeleteHealthId=id; document.getElementById('deleteHealthLabel').textContent=label; document.getElementById('deleteHealthModal').classList.remove('hidden'); }
+function closeDeleteHealthModal(){ pendingDeleteHealthId=null; document.getElementById('deleteHealthModal').classList.add('hidden'); }
+async function confirmDeleteHealthLog(){
+    if(!pendingDeleteHealthId) return;
+    const res=await fetch(`/api/health/${pendingDeleteHealthId}`,{method:'DELETE'});
+    if(res.ok){ const logs=await res.json(); renderHealthLogs(logs); loadHealthSummary(); }
+    closeDeleteHealthModal();
+}
+document.getElementById('deleteHealthModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteHealthModal(); });
+
+function openDeleteStudyModal(id){ pendingDeleteStudyId=id; document.getElementById('deleteStudyModal').classList.remove('hidden'); }
+function closeDeleteStudyModal(){ pendingDeleteStudyId=null; document.getElementById('deleteStudyModal').classList.add('hidden'); }
+async function confirmDeleteStudySession(){
+    if(!pendingDeleteStudyId) return;
+    const res=await fetch(`/api/study/${pendingDeleteStudyId}`,{method:'DELETE'});
+    if(res.ok){ loadStudySessions(); loadStudySummary(); if(currentTopicPage) loadTopicSessions(currentTopicPage); }
+    closeDeleteStudyModal();
+}
+document.getElementById('deleteStudyModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteStudyModal(); });
+
+function openDeleteNoteModal(id){ pendingDeleteNoteId=id; document.getElementById('deleteNoteModal').classList.remove('hidden'); }
+function closeDeleteNoteModal(){ pendingDeleteNoteId=null; document.getElementById('deleteNoteModal').classList.add('hidden'); }
+async function confirmDeleteNote(){
+    if(!pendingDeleteNoteId) return;
+    await fetch(`/api/study/notes/${pendingDeleteNoteId}`,{method:'DELETE'});
+    if(currentTopicPage) loadTopicNotes(currentTopicPage);
+    closeDeleteNoteModal();
+}
+document.getElementById('deleteNoteModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteNoteModal(); });
+
+function openDeleteSnippetModal(id){ pendingDeleteSnippetId=id; document.getElementById('deleteSnippetModal').classList.remove('hidden'); }
+function closeDeleteSnippetModal(){ pendingDeleteSnippetId=null; document.getElementById('deleteSnippetModal').classList.add('hidden'); }
+async function confirmDeleteSnippet(){
+    if(!pendingDeleteSnippetId) return;
+    await fetch(`/api/study/snippets/${pendingDeleteSnippetId}`,{method:'DELETE'});
+    if(currentTopicPage) loadTopicSnippets(currentTopicPage);
+    closeDeleteSnippetModal();
+}
+document.getElementById('deleteSnippetModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteSnippetModal(); });
+
+// ============================================================
+// HOUSING
+// ============================================================
+async function loadHousing(){
+    const res=await fetch('/api/housing'); const data=await res.json();
+    document.getElementById('monthlyRent').value=data.monthly_rent||'';
+    document.getElementById('securityAdvance').value=data.security_advance||'';
+    renderHousing(data);
+}
+function renderHousing(data){
+    const rent=Number(data.monthly_rent||0), advance=Number(data.security_advance||0), payments=data.payments||[];
+    const totalRentPaid=payments.reduce((s,p)=>s+Number(p.amount||0),0);
+    document.getElementById('summaryRent').textContent=fmt(rent);
+    document.getElementById('summaryAdvance').textContent=fmt(advance);
+    document.getElementById('summaryMonthsPaid').textContent=payments.length;
+    document.getElementById('summaryTotal').textContent=fmt(advance+totalRentPaid);
+    renderRentPayments(payments);
+}
+function renderRentPayments(payments){
+    const list=document.getElementById('rentPaymentsList');
+    if(!payments.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center">No rent payments recorded yet.</p>`; return; }
+    list.innerHTML=payments.map(p=>`
+        <div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm">
+            <div class="min-w-0 flex-1"><span class="font-semibold text-slate-700">${formatMonth(p.month)}</span><span class="text-slate-400 text-xs ml-1 block sm:inline">paid on ${formatDate(p.paid_on)}</span></div>
+            <div class="flex items-center gap-2 ml-2 shrink-0"><span class="font-semibold text-slate-600">${fmt(p.amount)}</span><button onclick="deleteRentPayment(${p.id})" class="text-red-400 hover:text-red-600 font-bold text-sm p-1">✕</button></div>
+        </div>`).join('');
+}
+async function saveHousing(){
+    const res=await fetch('/api/housing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monthly_rent:document.getElementById('monthlyRent').value||0,security_advance:document.getElementById('securityAdvance').value||0})});
+    renderHousing(await res.json());
+    const msg=document.getElementById('housingSaveMsg'); msg.classList.remove('hidden'); setTimeout(()=>msg.classList.add('hidden'),2000);
+}
+async function addRentPayment(){
+    const month=document.getElementById('rentMonth').value, paid_on=document.getElementById('rentPaidOn').value, msgEl=document.getElementById('rentPaymentMsg');
+    if(!month||!paid_on){ msgEl.textContent='Please select both the month and the date paid.'; msgEl.classList.remove('hidden'); return; }
+    const res=await fetch('/api/housing/payments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month,paid_on})});
+    const data=await res.json();
+    if(!res.ok){ msgEl.textContent=data.error||'Could not save payment.'; msgEl.classList.remove('hidden'); return; }
+    msgEl.classList.add('hidden'); renderHousing(data);
+    document.getElementById('rentMonth').value=''; document.getElementById('rentPaidOn').value='';
+}
+async function deleteRentPayment(id){ renderHousing(await (await fetch(`/api/housing/payments/${id}`,{method:'DELETE'})).json()); }
+
+// ============================================================
+// DAILY EXPENSES
+// ============================================================
+async function loadDays(){
+    const res=await fetch('/api/days'); const days=await res.json();
+    document.getElementById('daysContainer').innerHTML='';
+    days.forEach(d=>renderDayCard(d)); updateGrandTotal();
+}
+function renderDayCard(day){
+    const container=document.getElementById('daysContainer');
+    const card=document.createElement('div');
+    card.className='bg-white rounded-2xl shadow-md p-4 sm:p-5 fade-in';
+    card.id=`day-card-${day.id}`;
+    card.innerHTML=dayCardInnerHtml(day);
+    container.appendChild(card);
+}
+function dayCardInnerHtml(day){
+    const completed=!!day.completed;
+    const badge=completed?`<span class="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">Completed</span>`:`<span class="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-1 rounded-full">In Progress</span>`;
+    const formHtml=completed?'': `<div class="add-item-form flex gap-2 mt-3"><input type="text" placeholder="Item name" id="item-name-${day.id}" class="flex-1 min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"><input type="number" placeholder="₹ Amt" min="0" step="0.01" id="item-amount-${day.id}" class="w-24 sm:w-28 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"><button onclick="addItem(${day.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold shrink-0">Add</button></div>`;
+    const actionBtn=completed?`<button onclick="toggleComplete(${day.id})" class="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 px-3 py-1.5 rounded-lg">✏️ Edit</button>`:`<button onclick="toggleComplete(${day.id})" class="text-xs sm:text-sm font-semibold text-emerald-600 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-400 px-3 py-1.5 rounded-lg">✅ Complete</button>`;
+    return `<div class="flex justify-between items-center mb-1"><h3 class="text-base sm:text-lg font-bold text-slate-700">Day ${day.day_number}</h3><div class="flex items-center gap-2">${badge}<button onclick="openDeleteModal(${day.id},${day.day_number})" class="text-red-300 hover:text-red-500 p-1 rounded-lg hover:bg-red-50">🗑️</button></div></div><div class="flex justify-between items-center mb-3"><span class="text-xs sm:text-sm text-slate-500">Day Total</span><span class="text-sm font-semibold text-emerald-600" id="day-total-${day.id}">${fmt(day.total)}</span></div><div class="space-y-2 max-h-44 overflow-y-auto scrollbar-thin mb-3" id="day-items-${day.id}">${day.items.map(item=>itemRowHtml(day.id,item,completed)).join('')}</div>${formHtml}<div class="mt-3 flex justify-end">${actionBtn}</div>`;
+}
+function itemRowHtml(dayId,item,completed){
+    const del=completed?'':`<button onclick="deleteItem(${item.id},${dayId})" class="text-red-400 hover:text-red-600 font-bold text-xs p-1">✕</button>`;
+    const edit=completed?`<button onclick="editItem(${item.id},${dayId})" class="text-indigo-400 hover:text-indigo-600 font-bold text-xs p-1">✏️</button>`:'';
+    return `<div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm" id="item-${item.id}"><span class="text-slate-700 truncate flex-1 mr-2">${escHtml(item.item_name)}</span><div class="flex items-center gap-1 shrink-0"><span class="font-semibold text-slate-600">${fmt(item.amount)}</span>${edit}${del}</div></div>`;
+}
+async function addNextDay(){
+    const res=await fetch('/api/days',{method:'POST'}); const day=await res.json();
+    renderDayCard(day); updateGrandTotal();
+    document.getElementById(`day-card-${day.id}`)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function refreshDayCard(day){ const c=document.getElementById(`day-card-${day.id}`); if(c) c.innerHTML=dayCardInnerHtml(day); }
+async function addItem(dayId){
+    const name=document.getElementById(`item-name-${dayId}`).value.trim();
+    const amount=document.getElementById(`item-amount-${dayId}`).value;
+    if(!name||!amount){ alert('Please enter both an item name and an amount.'); return; }
+    const res=await fetch(`/api/days/${dayId}/items`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_name:name,amount})});
+    const day=await res.json(); refreshDayCard(day); updateGrandTotal();
+    document.getElementById(`item-name-${dayId}`)?.focus();
+}
+async function deleteItem(itemId,dayId){ refreshDayCard(await (await fetch(`/api/items/${itemId}`,{method:'DELETE'})).json()); updateGrandTotal(); }
+async function editItem(itemId,dayId){
+    const row=document.getElementById(`item-${itemId}`);
+    const curName=row.querySelector('span').textContent;
+    const curAmt=row.querySelectorAll('span')[1].textContent.replace(/[₹,]/g,'').trim();
+    const newName=prompt('Edit item name:',curName); if(newName===null) return;
+    const newAmt=prompt('Edit amount (₹):',curAmt); if(newAmt===null) return;
+    if(!newName.trim()||!newAmt||isNaN(Number(newAmt))){ alert('Please enter a valid name and amount.'); return; }
+    refreshDayCard(await (await fetch(`/api/items/${itemId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_name:newName.trim(),amount:newAmt})})).json());
+    updateGrandTotal();
+}
+async function toggleComplete(dayId){ refreshDayCard(await (await fetch(`/api/days/${dayId}/toggle-complete`,{method:'POST'})).json()); }
+async function updateGrandTotal(){ const data=await (await fetch('/api/summary')).json(); document.getElementById('grandDailyTotal').textContent=fmt(data.total_daily_expenses); }
+
+// ============================================================
+// HEALTH TRACKER
+// ============================================================
+const habitState={sugarCut:null,outsideFood:null,fruits:null};
+function setHabitChoice(key,val){ habitState[key]=val; renderHabitButtons(key); updateHealthQuote(); }
+function renderHabitButtons(key){
+    const m={sugarCut:['sugarCutYes','sugarCutNo'],outsideFood:['outsideFoodYes','outsideFoodNo'],fruits:['fruitsYes','fruitsNo']};
+    const [y,n]=m[key];
+    document.getElementById(y).classList.remove('selected-yes','selected-no');
+    document.getElementById(n).classList.remove('selected-yes','selected-no');
+    if(habitState[key]===true) document.getElementById(y).classList.add('selected-yes');
+    else if(habitState[key]===false) document.getElementById(n).classList.add('selected-no');
+}
+function resetHabitButtons(){ habitState.sugarCut=null; habitState.outsideFood=null; habitState.fruits=null; ['sugarCut','outsideFood','fruits'].forEach(renderHabitButtons); }
+async function loadHealthLogs(){ renderHealthLogs(await (await fetch('/api/health')).json()); }
+function renderHealthLogs(logs){
+    const list=document.getElementById('healthLogsList');
+    if(!logs.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center">No health logs yet.</p>`; return; }
+    const chip=(on,label)=>`<span class="text-xs font-semibold px-2 py-0.5 rounded-full ${on?'bg-emerald-100 text-emerald-700':'bg-red-50 text-red-400'}">${label}: ${on?'Yes':'No'}</span>`;
+    list.innerHTML=logs.map(l=>`
+        <div class="bg-slate-50 rounded-lg px-3 py-2.5 text-sm" id="health-log-${l.id}">
+            <div class="flex justify-between items-start gap-2">
+                <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-slate-700">${formatLogDate(l.log_date)}</p>
+                    <div class="flex flex-wrap gap-1.5 mt-1.5">${chip(l.sugar_cut,'🍬 Sugar Cut')}${chip(l.no_outside_food,'🍔 No Outside Food')}${chip(l.fruits_eaten,'🍎 Fruits')}</div>
+                    ${l.notes?`<p class="text-xs text-slate-400 mt-1.5">${escHtml(l.notes)}</p>`:''}
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button onclick="editHealthLog('${l.log_date}')" class="text-indigo-400 hover:text-indigo-600 p-1">✏️</button>
+                    <button onclick="openDeleteHealthModal(${l.id},'${formatLogDate(l.log_date)}')" class="text-red-400 hover:text-red-600 p-1">✕</button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+function editHealthLog(date){
+    document.getElementById('healthDate').value=date;
+    fetch('/api/health').then(r=>r.json()).then(logs=>{ const l=logs.find(x=>x.log_date===date); if(l){ habitState.sugarCut=l.sugar_cut; habitState.outsideFood=l.no_outside_food; habitState.fruits=l.fruits_eaten; ['sugarCut','outsideFood','fruits'].forEach(renderHabitButtons); document.getElementById('healthNotes').value=l.notes||''; updateHealthQuote(); }});
+    document.getElementById('healthDate').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function saveHealthLog(){
+    const errEl=document.getElementById('healthErrorMsg'), msgEl=document.getElementById('healthSaveMsg');
+    errEl.classList.add('hidden');
+    const log_date=document.getElementById('healthDate').value;
+    if(!log_date){ errEl.textContent='Please select a date.'; errEl.classList.remove('hidden'); return; }
+    if(habitState.sugarCut===null||habitState.outsideFood===null||habitState.fruits===null){ errEl.textContent='Please choose Yes or No for all three habits.'; errEl.classList.remove('hidden'); return; }
+    const res=await fetch('/api/health',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({log_date,sugar_cut:habitState.sugarCut,no_outside_food:habitState.outsideFood,fruits_eaten:habitState.fruits,notes:document.getElementById('healthNotes').value.trim()})});
+    const data=await res.json();
+    if(!res.ok){ errEl.textContent=data.error||'Could not save log.'; errEl.classList.remove('hidden'); return; }
+    renderHealthLogs(data); loadHealthSummary();
+    msgEl.classList.remove('hidden'); setTimeout(()=>msgEl.classList.add('hidden'),2000);
+    resetHabitButtons(); document.getElementById('healthNotes').value=''; updateHealthQuote();
+}
+async function loadHealthSummary(){
+    const data=await (await fetch('/api/health/summary')).json();
+    const total=data.total_days_tracked||0;
+    document.getElementById('statTotalDays').textContent=total;
+    document.getElementById('statSugarCut').textContent=`${data.sugar_cut_days} / ${total} days (${data.sugar_cut_pct}%)`;
+    document.getElementById('barSugarCut').style.width=`${data.sugar_cut_pct}%`;
+    document.getElementById('statOutsideFood').textContent=`${data.no_outside_food_days} / ${total} days (${data.no_outside_food_pct}%)`;
+    document.getElementById('barOutsideFood').style.width=`${data.no_outside_food_pct}%`;
+    document.getElementById('statFruits').textContent=`${data.fruits_eaten_days} / ${total} days (${data.fruits_eaten_pct}%)`;
+    document.getElementById('barFruits').style.width=`${data.fruits_eaten_pct}%`;
+    updateHealthQuote();
+}
+function updateHealthQuote(){
+    const box=document.getElementById('healthQuoteBox'),emojiEl=document.getElementById('healthQuoteEmoji'),textEl=document.getElementById('healthQuoteText');
+    let emoji="⏳",text="Log today's habits to see your motivation!",bg="bg-white/20";
+    if(habitState.sugarCut===false){ emoji="🍬"; text="Oops! Sugar sneaks in fast. Tomorrow is a fresh start!"; bg="bg-red-500/30"; }
+    else if(habitState.sugarCut===true&&habitState.outsideFood===true&&habitState.fruits===true){ emoji="🌟"; text="Amazing! Perfect day for all habits. Keep it up!"; bg="bg-emerald-500/30"; }
+    else if(habitState.sugarCut===true){ emoji="🥗"; text="Great job cutting sugar! Your future self will thank you."; bg="bg-emerald-500/30"; }
+    else if(habitState.fruits===true){ emoji="🍎"; text="Fruits are brain fuel! Stay energetic."; bg="bg-emerald-500/30"; }
+    emojiEl.textContent=emoji; textEl.textContent=text;
+    box.className=`mt-4 ${bg} backdrop-blur-sm rounded-xl p-4 text-center transition-all`;
+}
+
+// ============================================================
+// STUDY TRACKER – MAIN LIST
+// ============================================================
+const TOPIC_ICONS={HTML:'🟧',CSS:'🟦',JS:'🟨',ReactJS:'⚛️',Java:'☕',SpringBoot:'🍃',Hibernate:'🐻',SQL:'🗄️'};
+let studyTopics=[];
+
+async function loadStudyTopics(){ studyTopics=await (await fetch('/api/study/topics')).json(); renderStudyTopicCards(); populateStudyFilterDropdown(); }
+function renderStudyTopicCards(perTopicCounts){
+    document.getElementById('studyTopicsGrid').innerHTML=studyTopics.map(topic=>{
+        const c=perTopicCounts&&perTopicCounts[topic]?perTopicCounts[topic].sessions:0;
+        const h=perTopicCounts&&perTopicCounts[topic]?perTopicCounts[topic].hours:0;
+        return `<button onclick="openTopicPage('${topic}')" class="bg-white rounded-2xl shadow-md p-4 text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+            <div class="text-3xl mb-1">${TOPIC_ICONS[topic]||'📘'}</div>
+            <div class="font-bold text-slate-700 text-sm">${topic}</div>
+            <div class="text-xs text-slate-400 mt-1">${c} session${c===1?'':'s'}</div>
+            <div class="text-xs text-indigo-500 font-semibold">${h.toFixed(1)} hrs</div>
+        </button>`;
+    }).join('');
+}
+function populateStudyFilterDropdown(){
+    const sel=document.getElementById('studyFilterTopic'); const cur=sel.value;
+    sel.innerHTML='<option value="">All Topics</option>'+studyTopics.map(t=>`<option value="${t}">${t}</option>`).join('');
+    sel.value=cur;
+}
+
+// Study session modal (used both from main list and topic page)
+function openStudyModal(topic, sessionToEdit){
+    document.getElementById('studyModalTopic').textContent=topic;
+    document.getElementById('studySessionTopic').value=topic;
+    document.getElementById('studyFormError').classList.add('hidden');
+    if(sessionToEdit){
+        document.getElementById('studyModalTitle').textContent='✏️ Edit Study Session';
+        document.getElementById('studySessionId').value=sessionToEdit.id;
+        document.getElementById('studyDate').value=sessionToEdit.log_date;
+        document.getElementById('studySubtopic').value=sessionToEdit.subtopic;
+        document.getElementById('studyHours').value=sessionToEdit.hours;
+        document.getElementById('studyNotes').value=sessionToEdit.notes||'';
+    } else {
+        document.getElementById('studyModalTitle').textContent='📚 Log Study Session';
+        document.getElementById('studySessionId').value='';
+        document.getElementById('studyDate').value=todayLocalISO();
+        document.getElementById('studySubtopic').value='';
+        document.getElementById('studyHours').value='';
+        document.getElementById('studyNotes').value='';
+    }
+    document.getElementById('studyFormModal').classList.remove('hidden');
+}
+function closeStudyModal(){ document.getElementById('studyFormModal').classList.add('hidden'); }
+document.getElementById('studyFormModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeStudyModal(); });
+
+async function submitStudySession(){
+    const errEl=document.getElementById('studyFormError'); errEl.classList.add('hidden');
+    const id=document.getElementById('studySessionId').value;
+    const topic=document.getElementById('studySessionTopic').value;
+    const log_date=document.getElementById('studyDate').value;
+    const subtopic=document.getElementById('studySubtopic').value.trim();
+    const hours=document.getElementById('studyHours').value;
+    const notes=document.getElementById('studyNotes').value.trim();
+    if(!log_date){ errEl.textContent='Please select a date.'; errEl.classList.remove('hidden'); return; }
+    if(!subtopic){ errEl.textContent='Please describe what you studied.'; errEl.classList.remove('hidden'); return; }
+    const url=id?`/api/study/${id}`:'/api/study', method=id?'PUT':'POST';
+    const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,log_date,subtopic,hours:hours||0,notes})});
+    const data=await res.json();
+    if(!res.ok){ errEl.textContent=data.error||'Could not save session.'; errEl.classList.remove('hidden'); return; }
+    closeStudyModal(); loadStudySessions(); loadStudySummary();
+    if(currentTopicPage===topic) loadTopicSessions(topic);
+}
+
+async function loadStudySessions(){
+    const topic=document.getElementById('studyFilterTopic').value;
+    const url=topic?`/api/study?topic=${encodeURIComponent(topic)}`:'/api/study';
+    renderStudySessions(await (await fetch(url)).json());
+}
+function renderStudySessions(sessions){
+    const list=document.getElementById('studySessionsList');
+    if(!sessions.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center">No study sessions logged yet.</p>`; return; }
+    list.innerHTML=sessions.map(s=>studySessionRowHtml(s)).join('');
+}
+function studySessionRowHtml(s){
+    return `<div class="flex justify-between items-start gap-2 bg-slate-50 rounded-lg px-3 py-2.5 text-sm">
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2"><span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">${TOPIC_ICONS[s.topic]||'📘'} ${s.topic}</span><span class="text-xs text-slate-400">${formatLogDate(s.log_date)}</span></div>
+            <p class="font-medium text-slate-700 mt-1">${escHtml(s.subtopic)}</p>
+            ${s.notes?`<p class="text-xs text-slate-400 mt-0.5">${escHtml(s.notes)}</p>`:''}
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <span class="font-semibold text-indigo-600 text-xs whitespace-nowrap">${Number(s.hours).toFixed(1)} hrs</span>
+            <button onclick='openStudyModal("${s.topic}",${JSON.stringify(s)})' class="text-indigo-400 hover:text-indigo-600 p-1">✏️</button>
+            <button onclick="openDeleteStudyModal(${s.id})" class="text-red-400 hover:text-red-600 p-1">✕</button>
+        </div>
+    </div>`;
+}
+async function loadStudySummary(){
+    const data=await (await fetch('/api/study/summary')).json();
+    renderStudyTopicCards(data.per_topic);
+    document.getElementById('studyTotalHours').textContent=`${Number(data.total_hours).toFixed(1)} hrs`;
+    updateStudyQuote(data.total_hours);
+}
+function updateStudyQuote(h=0){
+    const box=document.getElementById('studyQuoteBox'),emojiEl=document.getElementById('studyQuoteEmoji'),textEl=document.getElementById('studyQuoteText');
+    let emoji="🚀",text="Ready to learn? Log your first session today!",bg="bg-indigo-50",border="border-indigo-100",tc="text-indigo-700";
+    if(h>0&&h<5){ emoji="🌱"; text="Great start! Every expert was once a beginner."; }
+    else if(h>=5&&h<15){ emoji="🔥"; text="You're building serious momentum!"; }
+    else if(h>=15&&h<30){ emoji="💪"; text="Deep work pays off. Amazing progress!"; }
+    else if(h>=30){ emoji="🏆"; text="Outstanding dedication! You're mastering your craft."; bg="bg-emerald-50"; border="border-emerald-200"; tc="text-emerald-700"; }
+    emojiEl.textContent=emoji; textEl.textContent=text;
+    box.className=`${bg} border ${border} rounded-xl p-4 text-center mb-6 sm:mb-8 transition-all`;
+    textEl.className=`${tc} font-medium text-sm`;
+}
+
+// ============================================================
+// TOPIC DETAIL PAGE
+// ============================================================
+function openTopicPage(topic){
+    currentTopicPage=topic;
+    document.getElementById('studySection').classList.add('hidden');
+    document.getElementById('topicDetailSection').classList.remove('hidden');
+    document.getElementById('topicDetailTitle').textContent=`${TOPIC_ICONS[topic]||'📘'} ${topic}`;
+    document.getElementById('topicDetailSub').textContent='Sessions · Notes · Code Snippets';
+    document.getElementById('mobilePageTitle').textContent=`${TOPIC_ICONS[topic]||'📘'} ${topic}`;
+    switchTopicTab('sessions');
+    loadTopicSessions(topic);
+    // preload others in background
+    loadTopicNotes(topic);
+    loadTopicSnippets(topic);
+}
+function closeTopicPage(switchBackToStudy=true){
+    currentTopicPage=null;
+    document.getElementById('topicDetailSection').classList.add('hidden');
+    if(switchBackToStudy){
+        document.getElementById('studySection').classList.remove('hidden');
+        document.getElementById('mobilePageTitle').textContent='📚 Study Tracker';
+    }
+}
+let currentTopicTab='sessions';
+function switchTopicTab(tab){
+    currentTopicTab=tab;
+    ['tpSessions','tpNotes','tpSnippets'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+    ['tpTabSessions','tpTabNotes','tpTabSnippets'].forEach(id=>{
+        const el=document.getElementById(id);
+        el.classList.remove('bg-white','shadow','text-indigo-700');
+        el.classList.add('text-slate-500');
+    });
+    const sectionMap={sessions:'tpSessions',notes:'tpNotes',snippets:'tpSnippets'};
+    const btnMap={sessions:'tpTabSessions',notes:'tpTabNotes',snippets:'tpTabSnippets'};
+    document.getElementById(sectionMap[tab]).classList.remove('hidden');
+    const btn=document.getElementById(btnMap[tab]);
+    btn.classList.add('bg-white','shadow','text-indigo-700');
+    btn.classList.remove('text-slate-500');
+}
+
+async function loadTopicSessions(topic){
+    const sessions=await (await fetch(`/api/study?topic=${encodeURIComponent(topic)}`)).json();
+    const list=document.getElementById('tpSessionsList');
+    if(!sessions.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center py-4">No sessions logged yet. Click "+ Add Session" to start!</p>`; return; }
+    list.innerHTML=sessions.map(s=>studySessionRowHtml(s)).join('');
+}
+
+// ============================================================
+// NOTES – FILE UPLOAD
+// ============================================================
+let selectedFile=null;
+function handleFileSelect(e){ selectedFile=e.target.files[0]; updateDropZoneLabel(); }
+function handleDragOver(e){ e.preventDefault(); document.getElementById('fileDropZone').classList.add('drag-over'); }
+function handleDragLeave(){ document.getElementById('fileDropZone').classList.remove('drag-over'); }
+function handleDrop(e){
+    e.preventDefault(); document.getElementById('fileDropZone').classList.remove('drag-over');
+    selectedFile=e.dataTransfer.files[0]; updateDropZoneLabel();
+}
+function updateDropZoneLabel(){
+    const el=document.getElementById('selectedFileName');
+    el.textContent=selectedFile?`📄 ${selectedFile.name} (${formatFileSize(selectedFile.size)})`:'';
+}
+async function uploadNote(){
+    const errEl=document.getElementById('noteUploadError'), msgEl=document.getElementById('noteUploadMsg');
+    errEl.classList.add('hidden'); msgEl.classList.add('hidden');
+    if(!selectedFile){ errEl.textContent='Please select a file first.'; errEl.classList.remove('hidden'); return; }
+    if(!currentTopicPage){ return; }
+    const fd=new FormData(); fd.append('file',selectedFile);
+    const res=await fetch(`/api/study/${currentTopicPage}/notes`,{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok){ errEl.textContent=data.error||'Upload failed.'; errEl.classList.remove('hidden'); return; }
+    renderTopicNotes(data);
+    msgEl.classList.remove('hidden'); setTimeout(()=>msgEl.classList.add('hidden'),2000);
+    selectedFile=null; document.getElementById('noteFileInput').value=''; updateDropZoneLabel();
+}
+async function loadTopicNotes(topic){
+    const notes=await (await fetch(`/api/study/${topic}/notes`)).json();
+    renderTopicNotes(notes);
+}
+function renderTopicNotes(notes){
+    const list=document.getElementById('tpNotesList');
+    if(!notes.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center py-4">No notes uploaded yet.</p>`; return; }
+    const extIcon=fn=>{ const e=fn.split('.').pop().toLowerCase(); const map={pdf:'📄',txt:'📝',md:'📝',docx:'📃',doc:'📃',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',pptx:'📊',xlsx:'📊',csv:'📊',html:'🌐',py:'🐍',java:'☕',js:'🟨',zip:'🗜️'}; return map[e]||'📎'; };
+    list.innerHTML=notes.map(n=>`
+        <div class="flex justify-between items-center bg-slate-50 rounded-xl px-3 py-3 text-sm gap-2">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="text-xl shrink-0">${extIcon(n.filename)}</span>
+                <div class="min-w-0">
+                    <p class="font-medium text-slate-700 truncate">${escHtml(n.filename)}</p>
+                    <p class="text-xs text-slate-400">${formatFileSize(n.file_size)} · uploaded ${formatDate(n.uploaded_at)}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <a href="/api/study/notes/${n.id}/download" class="text-indigo-500 hover:text-indigo-700 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg transition-colors">⬇️ Download</a>
+                <button onclick="openDeleteNoteModal(${n.id})" class="text-red-400 hover:text-red-600 p-1">✕</button>
+            </div>
+        </div>`).join('');
+}
+
+// ============================================================
+// CODE SNIPPETS
+// ============================================================
+async function loadTopicSnippets(topic){
+    allSnippets=await (await fetch(`/api/study/${topic}/snippets`)).json();
+    renderSnippets();
+}
+function renderSnippets(){
+    const q=document.getElementById('snippetSearch').value.toLowerCase().trim();
+    const filtered=q?allSnippets.filter(s=>s.tag.toLowerCase().includes(q)||s.explanation.toLowerCase().includes(q)||s.example_code.toLowerCase().includes(q)):allSnippets;
+    const list=document.getElementById('tpSnippetsList');
+    if(!filtered.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center py-4">${q?'No snippets match your search.':'No code snippets yet. Add one above!'}</p>`; return; }
+    function highlight(str){
+        if(!q) return escHtml(str);
+        const regex=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+        return escHtml(str).replace(regex,'<mark>$1</mark>');
+    }
+    list.innerHTML=filtered.map(s=>`
+        <div class="snippet-card bg-white rounded-2xl shadow-md p-4 border-l-4 border-indigo-400">
+            <div class="flex justify-between items-start gap-2 mb-2">
+                <div>
+                    <span class="inline-block font-mono text-sm font-bold bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg">${highlight(s.tag)}</span>
+                    <span class="text-xs text-slate-400 ml-2">${formatDate(s.created_at)}</span>
+                </div>
+                <div class="flex gap-1 shrink-0">
+                    <button onclick="startEditSnippet(${s.id})" class="text-indigo-400 hover:text-indigo-600 p-1">✏️</button>
+                    <button onclick="openDeleteSnippetModal(${s.id})" class="text-red-400 hover:text-red-600 p-1">✕</button>
+                </div>
+            </div>
+            <p class="text-sm text-slate-600 mb-3">${highlight(s.explanation)}</p>
+            <div class="bg-slate-900 rounded-xl p-4 overflow-x-auto">
+                <pre class="text-emerald-400 text-xs leading-relaxed">${escHtml(s.example_code)}</pre>
+            </div>
+        </div>`).join('');
+}
+function startEditSnippet(id){
+    const s=allSnippets.find(x=>x.id===id); if(!s) return;
+    document.getElementById('editingSnippetId').value=id;
+    document.getElementById('snippetTag').value=s.tag;
+    document.getElementById('snippetExplanation').value=s.explanation;
+    document.getElementById('snippetCode').value=s.example_code;
+    document.getElementById('snippetFormTitle').textContent='✏️ Edit Code Snippet';
+    document.getElementById('snippetSubmitBtn').textContent='Update Snippet';
+    document.getElementById('snippetCancelBtn').classList.remove('hidden');
+    document.getElementById('snippetTag').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelSnippetEdit(){
+    document.getElementById('editingSnippetId').value='';
+    document.getElementById('snippetTag').value='';
+    document.getElementById('snippetExplanation').value='';
+    document.getElementById('snippetCode').value='';
+    document.getElementById('snippetFormTitle').textContent='➕ Add Code Snippet';
+    document.getElementById('snippetSubmitBtn').textContent='Save Snippet';
+    document.getElementById('snippetCancelBtn').classList.add('hidden');
+    document.getElementById('snippetFormError').classList.add('hidden');
+}
+async function submitSnippet(){
+    const errEl=document.getElementById('snippetFormError'); errEl.classList.add('hidden');
+    const id=document.getElementById('editingSnippetId').value;
+    const tag=document.getElementById('snippetTag').value.trim();
+    const explanation=document.getElementById('snippetExplanation').value.trim();
+    const example_code=document.getElementById('snippetCode').value.trim();
+    if(!tag){ errEl.textContent='Please enter a tag/topic.'; errEl.classList.remove('hidden'); return; }
+    if(!explanation){ errEl.textContent='Please enter an explanation.'; errEl.classList.remove('hidden'); return; }
+    if(!example_code){ errEl.textContent='Please enter example code.'; errEl.classList.remove('hidden'); return; }
+    const url=id?`/api/study/snippets/${id}`:`/api/study/${currentTopicPage}/snippets`;
+    const method=id?'PUT':'POST';
+    const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({tag,explanation,example_code})});
+    const data=await res.json();
+    if(!res.ok){ errEl.textContent=data.error||'Could not save snippet.'; errEl.classList.remove('hidden'); return; }
+    allSnippets=data; renderSnippets(); cancelSnippetEdit();
+}
+
+// ============================================================
+// AUTOCORRECT (browser spellcheck + custom common corrections)
+// ============================================================
+const AUTOCORRECT_MAP = {
+    'teh':'the','taht':'that','dont':'don\'t','cant':'can\'t','wont':'won\'t',
+    'im':'I\'m','its a':'it\'s a','doesnt':'doesn\'t','didnt':'didn\'t',
+    'isnt':'isn\'t','wasnt':'wasn\'t','arent':'aren\'t','werent':'weren\'t',
+    'havent':'haven\'t','hasnt':'hasn\'t','hadnt':'hadn\'t','wouldnt':'wouldn\'t',
+    'couldnt':'couldn\'t','shouldnt':'shouldn\'t','thats':'that\'s','whats':'what\'s',
+    'heres':'here\'s','theres':'there\'s','its':'it\'s','i':'I',
+    'recieve':'receive','occured':'occurred','seperate':'separate','definately':'definitely',
+    'accomodate':'accommodate','occurance':'occurrence','untill':'until','begining':'beginning',
+    'wich':'which','becuase':'because','freind':'friend','grammer':'grammar',
+    'progam':'program','fucntion':'function','paramter':'parameter','returnn':'return',
+    'clss':'class','methid':'method','instanse':'instance','inherritance':'inheritance',
+    'oject':'object','varable':'variable','strng':'string','interger':'integer',
+    'datbase':'database','querry':'query','indexx':'index','colum':'column',
+    'tabel':'table','priamry':'primary','foriegn':'foreign','joinning':'joining',
+};
+let autocorrectTimer=null;
+function runAutocorrect(input){
+    clearTimeout(autocorrectTimer);
+    autocorrectTimer=setTimeout(()=>{
+        const words=input.value.split(/\s+/);
+        const lastWord=words[words.length-1].toLowerCase().replace(/[^a-z']/g,'');
+        const suggestionsEl=document.getElementById('autocorrectSuggestions');
+        if(AUTOCORRECT_MAP[lastWord]){
+            const correction=AUTOCORRECT_MAP[lastWord];
+            suggestionsEl.innerHTML=`<button type="button" onclick="applyAutocorrect('${input.id}','${lastWord}','${correction}')" class="autocorrect-suggestion text-xs px-2 py-0.5 font-medium">✏️ Did you mean: <strong>${correction}</strong>?</button>`;
+            suggestionsEl.classList.remove('hidden');
+        } else { suggestionsEl.classList.add('hidden'); }
+    },400);
+}
+function applyAutocorrect(inputId, wrong, correct){
+    const el=document.getElementById(inputId);
+    // Case-preserving replace of last occurrence
+    const regex=new RegExp('\\b'+wrong+'\\b','gi');
+    el.value=el.value.replace(regex, match => {
+        if(match[0]===match[0].toUpperCase()) return correct.charAt(0).toUpperCase()+correct.slice(1);
+        return correct;
+    });
+    document.getElementById('autocorrectSuggestions').classList.add('hidden');
+    el.focus();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded',()=>{
+    loadHousing();
+    loadDays();
+    document.getElementById('healthDate').value=todayLocalISO();
+    loadHealthLogs();
+    loadHealthSummary();
+    loadStudyTopics().then(()=>loadStudySummary());
+    loadStudySessions();
+    updateStudyQuote(0);
+    updateHealthQuote();
+    // Set daily active in drawer by default
+    document.getElementById('drawerDaily').classList.add('active-drawer');
+});
+</script>
 </body>
 </html>
