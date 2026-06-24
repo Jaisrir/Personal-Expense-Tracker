@@ -25,13 +25,6 @@
         .habit-choice-btn.selected-yes { background: #ecfdf5; border-color: #10b981; color: #047857; }
         .habit-choice-btn.selected-no { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
 
-        /* Hamburger Menu */
-        .hamburger-menu { display: none; }
-        @media (max-width: 767px) {
-            .desktop-tabs { display: none !important; }
-            .hamburger-menu { display: flex; }
-        }
-
         /* Slide-in drawer */
         #mobileDrawer {
             transform: translateX(-100%);
@@ -53,15 +46,6 @@
             white-space: pre-wrap;
             word-break: break-all;
         }
-        .file-drop-zone {
-            border: 2px dashed #c7d2fe;
-            transition: border-color 0.2s, background 0.2s;
-        }
-        .file-drop-zone.drag-over {
-            border-color: #4f46e5;
-            background: #eef2ff;
-        }
-
         /* Topic page back button area */
         .topic-page { display: none; }
         .topic-page.active { display: block; }
@@ -84,16 +68,13 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
-<!-- ========== HAMBURGER BUTTON (mobile only) ========== -->
-<div class="hamburger-menu fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm flex items-center justify-between px-4 py-3">
-    <button id="hamburgerBtn" onclick="toggleDrawer()" class="p-2 rounded-lg hover:bg-slate-100 transition-colors" aria-label="Menu">
-        <svg id="hamburgerIcon" class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-    </button>
-    <h1 id="mobilePageTitle" class="font-bold text-indigo-700 text-base truncate">💰 Expense Tracker</h1>
-    <div class="w-10"></div>
-</div>
+<!-- ========== FLOATING MENU BUTTON (always visible) ========== -->
+<button onclick="toggleDrawer()" class="fixed top-4 left-4 z-50 bg-white shadow-lg border border-slate-200 p-2.5 rounded-xl hover:bg-slate-50 transition-colors" aria-label="Menu">
+    <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+</button>
+<span id="mobilePageTitle" class="hidden"></span>
 
 <!-- Drawer Overlay -->
 <div id="drawerOverlay" onclick="closeDrawer()" class="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"></div>
@@ -191,17 +172,6 @@
         </div>
     </div>
 </div>
-<!-- Delete Note -->
-<div id="deleteNoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
-    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-        <h3 class="text-lg font-bold text-slate-700 mb-2">🗑️ Delete Note?</h3>
-        <p class="text-slate-500 text-sm mb-6">This will permanently delete this uploaded file.</p>
-        <div class="flex gap-3">
-            <button onclick="closeDeleteNoteModal()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg hover:bg-slate-50">Cancel</button>
-            <button onclick="confirmDeleteNote()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg">Yes, Delete</button>
-        </div>
-    </div>
-</div>
 <!-- Delete Snippet -->
 <div id="deleteSnippetModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden px-4">
     <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
@@ -215,13 +185,7 @@
 </div>
 
 <!-- ========== MAIN ========== -->
-<main class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8 md:pt-8 pt-16">
-
-    <!-- Header (hidden on mobile – shown in hamburger bar) -->
-    <header class="mb-6 sm:mb-8 text-center hidden md:block">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-indigo-700">💰 Personal Expense Tracker</h1>
-        <p class="text-slate-500 mt-1 text-sm sm:text-base">Track your housing costs and daily expenses in Bengaluru</p>
-    </header>
+<main class="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
 
     <!-- Desktop Tabs -->
     <div class="desktop-tabs flex justify-center gap-4 sm:gap-6 border-b border-slate-200 mb-6 sm:mb-8 overflow-x-auto">
@@ -406,14 +370,13 @@
             </button>
             <div>
                 <h2 id="topicDetailTitle" class="text-xl font-extrabold text-slate-700">HTML</h2>
-                <p class="text-xs text-slate-400" id="topicDetailSub">Notes · Code Snippets · Sessions</p>
+                <p class="text-xs text-slate-400" id="topicDetailSub">Sessions · Code Snippets</p>
             </div>
         </div>
 
         <!-- Tabs inside topic page -->
         <div class="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6 w-full sm:w-auto sm:inline-flex">
             <button id="tpTabSessions" onclick="switchTopicTab('sessions')" class="flex-1 sm:flex-none text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg bg-white shadow text-indigo-700 transition-all">📋 Sessions</button>
-            <button id="tpTabNotes" onclick="switchTopicTab('notes')" class="flex-1 sm:flex-none text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg text-slate-500 hover:text-slate-700 transition-all">📁 Notes</button>
             <button id="tpTabSnippets" onclick="switchTopicTab('snippets')" class="flex-1 sm:flex-none text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg text-slate-500 hover:text-slate-700 transition-all">💻 Snippets</button>
         </div>
 
@@ -426,27 +389,6 @@
             <div id="tpSessionsList" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin"></div>
         </div>
 
-        <!-- Notes tab -->
-        <div id="tpNotes" class="hidden fade-in">
-            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-4">
-                <h3 class="text-sm font-bold text-slate-700 mb-3">📤 Upload a Note</h3>
-                <p class="text-xs text-slate-400 mb-3">Accepted: PDF, TXT, MD, DOCX, PNG, JPG, PPTX, XLSX, CSV, HTML, PY, Java, JS, ZIP</p>
-                <div id="fileDropZone" class="file-drop-zone rounded-xl p-6 text-center cursor-pointer" onclick="document.getElementById('noteFileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-                    <div class="text-4xl mb-2">📂</div>
-                    <p class="text-sm text-slate-500 font-medium">Click to browse or drag & drop a file here</p>
-                    <p id="selectedFileName" class="text-xs text-indigo-600 mt-1 font-semibold"></p>
-                </div>
-                <input type="file" id="noteFileInput" class="hidden" onchange="handleFileSelect(event)" accept=".pdf,.txt,.md,.docx,.doc,.png,.jpg,.jpeg,.pptx,.xlsx,.csv,.html,.py,.java,.js,.zip">
-                <button onclick="uploadNote()" class="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">⬆️ Upload File</button>
-                <p id="noteUploadMsg" class="text-green-600 text-sm mt-2 text-center hidden">✅ Uploaded!</p>
-                <p id="noteUploadError" class="text-red-500 text-sm mt-2 text-center hidden"></p>
-            </div>
-            <div>
-                <p class="text-sm font-semibold text-slate-700 mb-3">Uploaded Files</p>
-                <div id="tpNotesList" class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin"></div>
-            </div>
-        </div>
-
         <!-- Snippets tab -->
         <div id="tpSnippets" class="hidden fade-in">
             <!-- Add snippet form -->
@@ -455,14 +397,12 @@
                 <input type="hidden" id="editingSnippetId">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">Topic / Tag <span class="text-slate-400">(e.g. &lt;a&gt;, useState)</span></label>
-                        <input type="text" id="snippetTag" maxlength="100" placeholder="e.g. <a>, flex, JOIN" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Tag <span class="text-slate-400">(e.g. &lt;a&gt;, useState)</span></label>
+                        <input type="text" id="snippetTag" maxlength="100" placeholder="e.g. <a>, flex, JOIN" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">Explanation <span class="text-slate-400">(autocorrect enabled)</span></label>
-                        <div class="relative">
-                            <input type="text" id="snippetExplanation" maxlength="400" placeholder="e.g. used for hyperlinks" spellcheck="true" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" oninput="runAutocorrect(this)">
-                        </div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Explanation <span class="text-slate-400">(autocorrect ✓)</span></label>
+                        <input type="text" id="snippetExplanation" maxlength="200" placeholder="e.g. used for hyperlinks" spellcheck="true" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" oninput="runAutocorrect(this)">
                         <div id="autocorrectSuggestions" class="mt-1 flex flex-wrap gap-1 hidden"></div>
                     </div>
                 </div>
@@ -497,9 +437,7 @@ function todayLocalISO() { const d=new Date(); return new Date(d.getTime()-d.get
 function formatDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
 function formatMonth(s){ const [y,m]=s.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString('en-IN',{month:'long',year:'numeric'}); }
 function formatLogDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}); }
-function formatFileSize(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
-
-let pendingDeleteDayId=null, pendingDeleteHealthId=null, pendingDeleteStudyId=null, pendingDeleteNoteId=null, pendingDeleteSnippetId=null;
+let pendingDeleteDayId=null, pendingDeleteHealthId=null, pendingDeleteStudyId=null, pendingDeleteSnippetId=null;
 let currentTopicPage = null;
 let allSnippets = [];
 
@@ -596,20 +534,9 @@ function closeDeleteStudyModal(){ pendingDeleteStudyId=null; document.getElement
 async function confirmDeleteStudySession(){
     if(!pendingDeleteStudyId) return;
     const res=await fetch(`/api/study/${pendingDeleteStudyId}`,{method:'DELETE'});
-    if(res.ok){ loadStudySessions(); loadStudySummary(); if(currentTopicPage) loadTopicSessions(currentTopicPage); }
-    closeDeleteStudyModal();
+    if(res.ok){ loadStudySessions(); loadStudySummary(); if(currentTopicPage) loadTopicSessions(currentTopicPage); }    closeDeleteStudyModal();
 }
 document.getElementById('deleteStudyModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteStudyModal(); });
-
-function openDeleteNoteModal(id){ pendingDeleteNoteId=id; document.getElementById('deleteNoteModal').classList.remove('hidden'); }
-function closeDeleteNoteModal(){ pendingDeleteNoteId=null; document.getElementById('deleteNoteModal').classList.add('hidden'); }
-async function confirmDeleteNote(){
-    if(!pendingDeleteNoteId) return;
-    await fetch(`/api/study/notes/${pendingDeleteNoteId}`,{method:'DELETE'});
-    if(currentTopicPage) loadTopicNotes(currentTopicPage);
-    closeDeleteNoteModal();
-}
-document.getElementById('deleteNoteModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDeleteNoteModal(); });
 
 function openDeleteSnippetModal(id){ pendingDeleteSnippetId=id; document.getElementById('deleteSnippetModal').classList.remove('hidden'); }
 function closeDeleteSnippetModal(){ pendingDeleteSnippetId=null; document.getElementById('deleteSnippetModal').classList.add('hidden'); }
@@ -913,12 +840,10 @@ function openTopicPage(topic){
     document.getElementById('studySection').classList.add('hidden');
     document.getElementById('topicDetailSection').classList.remove('hidden');
     document.getElementById('topicDetailTitle').textContent=`${TOPIC_ICONS[topic]||'📘'} ${topic}`;
-    document.getElementById('topicDetailSub').textContent='Sessions · Notes · Code Snippets';
+    document.getElementById('topicDetailSub').textContent='Sessions · Code Snippets';
     document.getElementById('mobilePageTitle').textContent=`${TOPIC_ICONS[topic]||'📘'} ${topic}`;
     switchTopicTab('sessions');
     loadTopicSessions(topic);
-    // preload others in background
-    loadTopicNotes(topic);
     loadTopicSnippets(topic);
 }
 function closeTopicPage(switchBackToStudy=true){
@@ -932,14 +857,14 @@ function closeTopicPage(switchBackToStudy=true){
 let currentTopicTab='sessions';
 function switchTopicTab(tab){
     currentTopicTab=tab;
-    ['tpSessions','tpNotes','tpSnippets'].forEach(id=>document.getElementById(id).classList.add('hidden'));
-    ['tpTabSessions','tpTabNotes','tpTabSnippets'].forEach(id=>{
+    ['tpSessions','tpSnippets'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+    ['tpTabSessions','tpTabSnippets'].forEach(id=>{
         const el=document.getElementById(id);
         el.classList.remove('bg-white','shadow','text-indigo-700');
         el.classList.add('text-slate-500');
     });
-    const sectionMap={sessions:'tpSessions',notes:'tpNotes',snippets:'tpSnippets'};
-    const btnMap={sessions:'tpTabSessions',notes:'tpTabNotes',snippets:'tpTabSnippets'};
+    const sectionMap={sessions:'tpSessions',snippets:'tpSnippets'};
+    const btnMap={sessions:'tpTabSessions',snippets:'tpTabSnippets'};
     document.getElementById(sectionMap[tab]).classList.remove('hidden');
     const btn=document.getElementById(btnMap[tab]);
     btn.classList.add('bg-white','shadow','text-indigo-700');
@@ -954,62 +879,12 @@ async function loadTopicSessions(topic){
 }
 
 // ============================================================
-// NOTES – FILE UPLOAD
-// ============================================================
-let selectedFile=null;
-function handleFileSelect(e){ selectedFile=e.target.files[0]; updateDropZoneLabel(); }
-function handleDragOver(e){ e.preventDefault(); document.getElementById('fileDropZone').classList.add('drag-over'); }
-function handleDragLeave(){ document.getElementById('fileDropZone').classList.remove('drag-over'); }
-function handleDrop(e){
-    e.preventDefault(); document.getElementById('fileDropZone').classList.remove('drag-over');
-    selectedFile=e.dataTransfer.files[0]; updateDropZoneLabel();
-}
-function updateDropZoneLabel(){
-    const el=document.getElementById('selectedFileName');
-    el.textContent=selectedFile?`📄 ${selectedFile.name} (${formatFileSize(selectedFile.size)})`:'';
-}
-async function uploadNote(){
-    const errEl=document.getElementById('noteUploadError'), msgEl=document.getElementById('noteUploadMsg');
-    errEl.classList.add('hidden'); msgEl.classList.add('hidden');
-    if(!selectedFile){ errEl.textContent='Please select a file first.'; errEl.classList.remove('hidden'); return; }
-    if(!currentTopicPage){ return; }
-    const fd=new FormData(); fd.append('file',selectedFile);
-    const res=await fetch(`/api/study/${currentTopicPage}/notes`,{method:'POST',body:fd});
-    const data=await res.json();
-    if(!res.ok){ errEl.textContent=data.error||'Upload failed.'; errEl.classList.remove('hidden'); return; }
-    renderTopicNotes(data);
-    msgEl.classList.remove('hidden'); setTimeout(()=>msgEl.classList.add('hidden'),2000);
-    selectedFile=null; document.getElementById('noteFileInput').value=''; updateDropZoneLabel();
-}
-async function loadTopicNotes(topic){
-    const notes=await (await fetch(`/api/study/${topic}/notes`)).json();
-    renderTopicNotes(notes);
-}
-function renderTopicNotes(notes){
-    const list=document.getElementById('tpNotesList');
-    if(!notes.length){ list.innerHTML=`<p class="text-sm text-slate-400 text-center py-4">No notes uploaded yet.</p>`; return; }
-    const extIcon=fn=>{ const e=fn.split('.').pop().toLowerCase(); const map={pdf:'📄',txt:'📝',md:'📝',docx:'📃',doc:'📃',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',pptx:'📊',xlsx:'📊',csv:'📊',html:'🌐',py:'🐍',java:'☕',js:'🟨',zip:'🗜️'}; return map[e]||'📎'; };
-    list.innerHTML=notes.map(n=>`
-        <div class="flex justify-between items-center bg-slate-50 rounded-xl px-3 py-3 text-sm gap-2">
-            <div class="flex items-center gap-2 min-w-0 flex-1">
-                <span class="text-xl shrink-0">${extIcon(n.filename)}</span>
-                <div class="min-w-0">
-                    <p class="font-medium text-slate-700 truncate">${escHtml(n.filename)}</p>
-                    <p class="text-xs text-slate-400">${formatFileSize(n.file_size)} · uploaded ${formatDate(n.uploaded_at)}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-                <a href="/api/study/notes/${n.id}/download" class="text-indigo-500 hover:text-indigo-700 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg transition-colors">⬇️ Download</a>
-                <button onclick="openDeleteNoteModal(${n.id})" class="text-red-400 hover:text-red-600 p-1">✕</button>
-            </div>
-        </div>`).join('');
-}
-
-// ============================================================
 // CODE SNIPPETS
 // ============================================================
 async function loadTopicSnippets(topic){
     allSnippets=await (await fetch(`/api/study/${topic}/snippets`)).json();
+    // reverse so oldest (lowest id) shows first
+    allSnippets=allSnippets.slice().reverse();
     renderSnippets();
 }
 function renderSnippets(){
