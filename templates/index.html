@@ -43,8 +43,9 @@
             resize: vertical;
         }
         .snippet-card pre {
-            white-space: pre-wrap;
-            word-break: break-all;
+            white-space: pre;
+            word-break: normal;
+            overflow-x: auto;
         }
         /* Topic page back button area */
         .topic-page { display: none; }
@@ -725,7 +726,7 @@ function updateHealthQuote(){
 // ============================================================
 // STUDY TRACKER – MAIN LIST
 // ============================================================
-const TOPIC_ICONS={HTML:'🟧',CSS:'🟦',JS:'🟨',ReactJS:'⚛️',Java:'☕',SpringBoot:'🍃',Hibernate:'🐻',SQL:'🗄️'};
+const TOPIC_ICONS={HTML:'🟧',CSS:'🟦',JS:'🟨',ReactJS:'⚛️',Java:'☕',SpringBoot:'🍃',Hibernate:'🐻',SQL:'🗄️','Aptitude':'🧠','Personal Practice':'✍️'};
 let studyTopics=[];
 
 async function loadStudyTopics(){ studyTopics=await (await fetch('/api/study/topics')).json(); renderStudyTopicCards(); populateStudyFilterDropdown(); }

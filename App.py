@@ -152,7 +152,7 @@ class CodeSnippet(db.Model):
         }
 
 
-VALID_STUDY_TOPICS = ['HTML', 'CSS', 'JS', 'ReactJS', 'Java', 'SpringBoot', 'Hibernate', 'SQL']
+VALID_STUDY_TOPICS = ['HTML', 'CSS', 'JS', 'ReactJS', 'Java', 'SpringBoot', 'Hibernate', 'SQL', 'Aptitude', 'Personal Practice']
 
 try:
     with app.app_context():
